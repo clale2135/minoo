@@ -17,6 +17,7 @@ import cv2
 from streamlit_drawable_canvas import st_canvas
 
 ## clare's comments
+#minoo
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
