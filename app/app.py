@@ -15,6 +15,15 @@ import re
 import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
+import io
+try:
+    import pyperclip
+except ImportError:
+    # Fallback if pyperclip is not available
+    class PyperclipFallback:
+        def copy(self, text):
+            st.code(text, language=None)
+    pyperclip = PyperclipFallback()
 
 ## clare's comments
 #minoo
@@ -2331,124 +2340,150 @@ def style_quizzes():
         wardrobe_essentials_quiz()
 
 def color_analysis_quiz():
-    """Quiz to determine user's color season"""
-    st.markdown("### 🎨 Color Analysis Quiz")
+    """Updated quiz with photo upload for automated color analysis"""
+    st.markdown("### 🎨 Personal Color Analysis")
     st.markdown("""
-        Let's find your color season! Answer these questions about your natural coloring.
-        This will help you choose colors that enhance your natural beauty.
+        Let's determine your color season using photo analysis! 
+        Upload a clear photo of yourself taken in natural lighting with minimal makeup.
     """)
     
-    questions = {
-        'skin_undertone': {
-            'question': "What are the undertones of your skin?",
-            'options': [
-                "Warm (golden, peachy, or yellow)",
-                "Cool (pink, red, or blue)",
-                "Neutral (mix of warm and cool)",
-                "Not sure"
-            ],
-            'help': "Look at the veins on your wrist - green veins suggest warm, blue/purple suggest cool"
-        },
-        'hair_color': {
-            'question': "What's your natural hair color?",
-            'options': [
-                "Golden blonde",
-                "Ash blonde",
-                "Warm brown",
-                "Cool brown",
-                "Black",
-                "Red/Auburn",
-                "Gray/Silver"
-            ]
-        },
-        'eye_color': {
-            'question': "What's your eye color?",
-            'options': [
-                "Warm brown",
-                "Cool brown",
-                "Hazel",
-                "Green",
-                "Blue",
-                "Gray"
-            ]
-        },
-        'jewelry': {
-            'question': "Which metal jewelry looks best on you?",
-            'options': [
-                "Gold",
-                "Silver",
-                "Both look equally good",
-                "Rose gold"
-            ]
-        },
-        'sun_reaction': {
-            'question': "How does your skin react to sun exposure?",
-            'options': [
-                "Tans easily, rarely burns",
-                "Burns easily, rarely tans",
-                "Burns first, then tans",
-                "Never burns or tans much"
-            ]
-        }
+    uploaded_file = st.file_uploader(
+        "Upload your photo",
+        type=['jpg', 'jpeg', 'png'],
+        help="For best results, use a photo taken in natural daylight with a neutral background"
+    )
+    
+    if uploaded_file:
+        # Display uploaded image
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Your uploaded photo", width=300)
+        
+        # Convert image to bytes for API
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format=image.format)
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        if st.button("Analyze My Colors", type="primary"):
+            with st.spinner("Analyzing your colors..."):
+                # Get color analysis from Imagga
+                colors_data = analyze_colors_with_imagga(img_byte_arr)
+                
+                if colors_data:
+                    # Determine color season using GPT-4
+                    analysis = determine_color_season(colors_data)
+                    
+                    if analysis:
+                        st.markdown(f"""
+                            ### 🌟 Your Color Analysis Results
+                            
+                            **Your Color Season:** {analysis['season']}
+                            
+                            **Undertone:** {analysis['undertone']}
+                            
+                            **Most Flattering Colors:**
+                            {', '.join(analysis['flattering_colors'])}
+                            
+                            **Analysis:**
+                            {analysis['explanation']}
+                        """)
+                        
+                        # Save results to user profile
+                        save_color_analysis(
+                            st.session_state.username,
+                            analysis
+                        )
+                        
+                        # Show example outfits
+                        show_example_outfits(analysis['season'])
+                    else:
+                        st.error("Could not determine color season. Please try again.")
+
+def save_color_analysis(username, analysis):
+    """Save color analysis results to user profile"""
+    profile_file = f"{username}_profile.json"
+    profile_data = {}
+    
+    if os.path.exists(profile_file):
+        with open(profile_file, 'r') as f:
+            profile_data = json.load(f)
+    
+    profile_data['color_analysis'] = {
+        'season': analysis['season'],
+        'undertone': analysis['undertone'],
+        'flattering_colors': analysis['flattering_colors'],
+        'analysis_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    responses = {}
-    for key, data in questions.items():
-        responses[key] = st.radio(
-            data['question'],
-            data['options'],
-            help=data.get('help', None),
-            key=f"color_{key}"
+    with open(profile_file, 'w') as f:
+        json.dump(profile_data, f, indent=2)
+
+def show_example_outfits(color_season):
+    """Show example outfits based on color season"""
+    st.markdown("### 👗 Example Outfits for Your Color Season")
+    
+    # Load user's clothing
+    user_clothing = load_user_clothing()
+    
+    if not user_clothing.empty:
+        # Use GPT-4 to suggest outfits from user's wardrobe that match their color season
+        prompt = f"""Based on this wardrobe data:
+        {user_clothing[['name', 'color', 'type_of_clothing']].to_string()}
+        
+        Suggest 2-3 outfits that would work well for a {color_season} color season.
+        Only include items that actually exist in the wardrobe data.
+        Return each outfit as a list of item names, one outfit per line."""
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a fashion expert specializing in color analysis."},
+                {"role": "user", "content": prompt}
+            ]
         )
-        st.markdown("---")
-    
-    if st.button("Analyze My Colors", type="primary"):
-        season = analyze_color_season(responses)
-        show_color_results(season)
-
-def analyze_color_season(responses):
-    """Analyze quiz responses to determine color season"""
-    prompt = f"""Based on these characteristics:
-    Skin undertone: {responses['skin_undertone']}
-    Natural hair color: {responses['hair_color']}
-    Eye color: {responses['eye_color']}
-    Best jewelry: {responses['jewelry']}
-    Sun reaction: {responses['sun_reaction']}
-    
-    Determine the person's color season (Spring, Summer, Autumn, or Winter) and specify if it's warm or cool.
-    Return ONLY the season name in this format: "Warm Spring" or "Cool Winter" etc."""
-    
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a color analysis expert."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message.content.strip()
-
-def show_color_results(season):
-    """Display color analysis results"""
-    st.success(f"Your Color Season: {season}")
-    
-    # Color recommendations based on season
-    colors = get_season_colors(season)
-    
-    st.markdown("### Your Best Colors")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Recommended Colors")
-        for color in colors['recommended']:
-            st.markdown(f"- {color}")
-    
-    with col2:
-        st.markdown("#### Colors to Avoid")
-        for color in colors['avoid']:
-            st.markdown(f"- {color}")
-    
-    st.markdown("### Styling Tips")
-    st.markdown(get_season_tips(season))
+        
+        suggested_outfits = response.choices[0].message.content.strip().split('\n')
+        
+        for i, outfit in enumerate(suggested_outfits, 1):
+            st.markdown(f"#### Outfit {i}")
+            
+            # Display items in the outfit
+            cols = st.columns(3)
+            items = [item.strip() for item in outfit.split(',')]
+            
+            for idx, item_name in enumerate(items):
+                matching_item = user_clothing[user_clothing['name'].str.contains(item_name, case=False)]
+                
+                if not matching_item.empty:
+                    with cols[idx % 3]:
+                        try:
+                            image_path = matching_item.iloc[0]['image_path']
+                            if os.path.exists(image_path):
+                                image = Image.open(image_path)
+                                st.image(image, caption=item_name, use_column_width=True)
+                        except Exception as e:
+                            st.error(f"Error displaying image for: {item_name}")
+            
+            # Option to save the outfit
+            if st.button(f"Save Outfit {i}", key=f"save_outfit_{i}"):
+                # Collect the valid items
+                valid_items = []
+                for item_name in items:
+                    matching_item = user_clothing[user_clothing['name'].str.contains(item_name, case=False)]
+                    if not matching_item.empty:
+                        item_data = matching_item.iloc[0]
+                        valid_items.append({
+                            "name": item_data['name'],
+                            "image_path": item_data['image_path'],
+                            "type_of_clothing": item_data['type_of_clothing'],
+                            "color": item_data['color']
+                        })
+                
+                if valid_items:
+                    outfit_name = f"Color Season Outfit {datetime.now().strftime('%Y%m%d_%H%M')}"
+                    if save_outfit(valid_items, outfit_name, f"{color_season} Season"):
+                        st.success(f"✨ Outfit saved as '{outfit_name}'!")
+    else:
+        st.info("Add some clothes to your wardrobe to see personalized outfit suggestions!")
 
 def face_shape_quiz():
     """Quiz to determine user's face shape"""
@@ -3007,32 +3042,644 @@ def show_wardrobe_essentials_results(essentials):
         else:
             st.success("You have items matching all the essentials!")
 
-def save_color_analysis(username, analysis):
-    """Save user's color analysis to their profile"""
+def analyze_colors_with_imagga(image_bytes):
+    """Analyze image colors using Imagga API"""
+    api_key = os.getenv("IMAGGA_API_KEY")
+    api_secret = os.getenv("IMAGGA_API_SECRET")
+    
+    if not api_key or not api_secret:
+        st.error("Imagga API credentials not found. Please check your .env file.")
+        return None
+    
     try:
-        profile_file = f"{username}_profile.json"
+        # Imagga API endpoint for color analysis
+        api_url = "https://api.imagga.com/v2/colors"
         
-        # Load existing profile or create new one
-        if os.path.exists(profile_file):
-            with open(profile_file, 'r') as f:
-                profile_data = json.load(f)
+        # Prepare the image file for upload
+        files = {'image': image_bytes}
+        
+        # Make API request
+        response = requests.post(
+            api_url,
+            auth=(api_key, api_secret),
+            files=files
+        )
+        
+        if response.status_code == 200:
+            return response.json()
         else:
-            profile_data = {}
-        
-        # Update with color analysis
-        profile_data['color_analysis'] = {
-            'season': analysis['season'],
-            'best_colors': analysis['best_colors'],
-            'avoid_colors': analysis['avoid_colors'],
-            'analysis_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        
-        # Save updated profile
-        with open(profile_file, 'w') as f:
-            json.dump(profile_data, f, indent=2)
+            st.error(f"Error from Imagga API: {response.text}")
+            return None
             
     except Exception as e:
-        st.error(f"Error saving color analysis: {str(e)}")
+        st.error(f"Error accessing Imagga API: {str(e)}")
+        return None
+
+def determine_color_season(colors_data):
+    """Use GPT-4 to determine color season based on Imagga color analysis"""
+    if not colors_data or 'result' not in colors_data:
+        return None
+        
+    # Extract dominant colors and their properties
+    colors = colors_data['result']['colors']
+    
+    # Format color data for GPT-4
+    color_info = {
+        'background_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                            for c in colors.get('background_colors', [])],
+        'foreground_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                            for c in colors.get('foreground_colors', [])],
+        'image_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                        for c in colors.get('image_colors', [])]
+    }
+    
+    prompt = f"""Based on this color analysis of a person's photo:
+    
+    Dominant colors (hex codes and percentages):
+    {json.dumps(color_info, indent=2)}
+    
+    Please determine:
+    1. Their likely color season (Spring, Summer, Autumn, or Winter)
+    2. Whether they have warm or cool undertones
+    3. A list of 5-7 colors that would be most flattering for them
+    
+    Return your response in this exact JSON format:
+    {{
+        "season": "Season name",
+        "undertone": "Warm or Cool",
+        "flattering_colors": ["color1", "color2", "etc"],
+        "explanation": "Brief explanation of the analysis"
+    }}"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a color analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    try:
+        return json.loads(response.choices[0].message.content)
+    except:
+        return None
+
+def face_shape_quiz():
+    """Quiz to determine user's face shape"""
+    st.markdown("### 👤 Face Shape Analysis")
+    st.markdown("""
+        Understanding your face shape helps you choose the most flattering:
+        - Hairstyles
+        - Glasses frames
+        - Necklines
+        - Accessories
+    """)
+    
+    questions = {
+        'face_length': {
+            'question': "How would you describe your face length?",
+            'options': [
+                "Longer than it is wide",
+                "About equal in length and width",
+                "Wider than it is long"
+            ]
+        },
+        'jaw_shape': {
+            'question': "Which best describes your jaw?",
+            'options': [
+                "Angular and sharp",
+                "Rounded",
+                "Square and prominent",
+                "Narrow and pointed"
+            ]
+        },
+        'cheekbones': {
+            'question': "How would you describe your cheekbones?",
+            'options': [
+                "High and prominent",
+                "Round and full",
+                "Not very prominent",
+                "Wide and angular"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"face_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Determine My Face Shape", type="primary"):
+        face_shape = analyze_face_shape(responses)
+        show_face_shape_results(face_shape)
+
+def body_type_quiz():
+    """Quiz to determine user's body type"""
+    st.markdown("### 📏 Body Type Analysis")
+    st.markdown("""
+        Understanding your body type helps you:
+        - Choose flattering silhouettes
+        - Balance your proportions
+        - Create harmonious outfits
+    """)
+    
+    questions = {
+        'shoulders': {
+            'question': "How would you describe your shoulders?",
+            'options': [
+                "Broader than my hips",
+                "Same width as my hips",
+                "Narrower than my hips",
+                "Angular and straight"
+            ]
+        },
+        'waist': {
+            'question': "How defined is your waist?",
+            'options': [
+                "Very defined/curved",
+                "Somewhat defined",
+                "Straight with little definition",
+                "Not visible/undefined"
+            ]
+        },
+        'body_lines': {
+            'question': "Which best describes your overall body lines?",
+            'options': [
+                "Curved and rounded",
+                "Straight and angular",
+                "Mixed curved and straight",
+                "Soft and undefined"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"body_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Analyze My Body Type", type="primary"):
+        body_type = analyze_body_type(responses)
+        show_body_type_results(body_type)
+
+def analyze_face_shape(responses):
+    """Analyze quiz responses to determine face shape"""
+    prompt = f"""Based on these characteristics:
+    Face length: {responses['face_length']}
+    Jaw shape: {responses['jaw_shape']}
+    Cheekbones: {responses['cheekbones']}
+    
+    Determine the person's face shape (Oval, Round, Square, Heart, Diamond, or Rectangle).
+    Return ONLY the face shape name."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a face shape analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+def show_face_shape_results(face_shape):
+    """Display face shape analysis results"""
+    st.success(f"Your Face Shape: {face_shape}")
+    st.markdown(get_face_shape_tips(face_shape))
+
+def get_face_shape_tips(face_shape):
+    """Get styling tips for a face shape"""
+    tips = {
+        "Oval": "Lucky you! Most styles work well with your balanced proportions.",
+        "Round": "Choose angular frames and accessories to add definition.",
+        "Square": "Soften angles with curved lines and oval shapes.",
+        "Heart": "Balance a wider forehead with wider bottom frames.",
+        "Diamond": "Highlight your cheekbones with upswept frames.",
+        "Rectangle": "Add width with round or square shapes."
+    }
+    return tips.get(face_shape, "No specific tips available for this face shape.")
+
+def get_season_tips(season):
+    """Get styling tips for a color season"""
+    tips = {
+        "Warm Spring": """
+            - Wear warm, clear colors
+            - Choose golden jewelry
+            - Avoid dark, cool colors
+            - Best neutrals are camel and warm brown
+        """,
+        "Cool Winter": """
+            - Wear clear, cool colors
+            - Choose silver jewelry
+            - Avoid muted, warm colors
+            - Best neutrals are navy and gray
+        """,
+        # Add other seasons as needed
+    }
+    return tips.get(season, "No specific tips available for this season.")
+
+# Fix 1: Add missing function for analyzing body type
+def analyze_body_type(responses):
+    """Analyze quiz responses to determine body type"""
+    prompt = f"""Based on these characteristics:
+    Shoulders: {responses['shoulders']}
+    Waist: {responses['waist']}
+    Body lines: {responses['body_lines']}
+    
+    Determine the person's body type (Hourglass, Rectangle, Triangle, Inverted Triangle, or Oval).
+    Return ONLY the body type name."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a body type analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+# Fix 2: Add missing function for showing body type results
+def show_body_type_results(body_type):
+    """Display body type analysis results"""
+    st.success(f"Your Body Type: {body_type}")
+    
+    tips = {
+        "Hourglass": """
+            - Emphasize your natural waist
+            - Choose fitted clothing that follows your curves
+            - Belt dresses and tops to highlight your waist
+            - Avoid boxy or oversized styles
+        """,
+        "Rectangle": """
+            - Create curves with peplum tops and wrap dresses
+            - Use belts to define your waist
+            - Layer pieces to add dimension
+            - Try ruffles and gathered details
+        """,
+        "Triangle": """
+            - Draw attention upward with detailed tops
+            - Choose A-line skirts and dresses
+            - Opt for darker colors on bottom
+            - Balance with structured shoulders
+        """,
+        "Inverted Triangle": """
+            - Balance shoulders with fuller skirts
+            - Choose V-necks and scoop necklines
+            - Add volume to lower body
+            - Avoid shoulder pads and puffy sleeves
+        """,
+        "Oval": """
+            - Create vertical lines to elongate
+            - Choose flowing fabrics
+            - Wear empire waist styles
+            - Focus on structured pieces
+        """
+    }
+    
+    st.markdown("### Styling Tips")
+    st.markdown(tips.get(body_type, "No specific tips available for this body type."))
+
+# Fix 3: Add missing function for style personality quiz
+def style_personality_quiz():
+    """Quiz to determine user's style personality"""
+    st.markdown("### 👗 Style Personality Quiz")
+    st.markdown("""
+        Discover your unique style personality! This comprehensive quiz analyzes your preferences
+        across multiple dimensions to help you understand and develop your personal style.
+    """)
+    
+    questions = {
+        'weekend_style': {
+            'question': "What's your ideal weekend outfit?",
+            'options': [
+                "Comfortable athleisure (leggings, oversized sweater, sneakers)",
+                "Polished casual (well-fitted jeans, blazer, loafers)",
+                "Bold, artistic ensembles (mixed patterns, unique pieces)",
+                "Classic, timeless basics (white shirt, tailored pants)",
+                "Trendy, fashion-forward looks (latest styles, statement pieces)"
+            ]
+        },
+        'color_approach': {
+            'question': "How do you approach color in your wardrobe?",
+            'options': [
+                "Neutral palette with occasional pops of color",
+                "Bold, vibrant colors that make a statement",
+                "Soft, muted tones that blend together",
+                "Monochromatic looks in varying shades",
+                "Mix of bright and neutral depending on mood"
+            ]
+        },
+        'accessories': {
+            'question': "How do you approach accessories?",
+            'options': [
+                "Minimal and practical (simple watch, studs)",
+                "Classic and coordinated (pearls, matching sets)",
+                "Bold statement pieces (chunky jewelry, unique designs)",
+                "Vintage or artistic pieces with history",
+                "Latest trends and modern designs"
+            ]
+        },
+        'shopping': {
+            'question': "What's your shopping style?",
+            'options': [
+                "Quality basics that last years",
+                "Investment pieces from luxury brands",
+                "Unique, artistic pieces from boutiques",
+                "Mix of vintage and contemporary",
+                "Latest trends from fashion retailers"
+            ]
+        },
+        'outfit_planning': {
+            'question': "How do you approach outfit planning?",
+            'options': [
+                "Carefully coordinated the night before",
+                "Capsule wardrobe with easy mixing",
+                "Spontaneous based on mood",
+                "Following specific style rules",
+                "Inspired by current trends"
+            ]
+        },
+        'style_icons': {
+            'question': "Which style icon's aesthetic most resonates with you?",
+            'options': [
+                "Audrey Hepburn (timeless elegance)",
+                "Kate Moss (effortless cool)",
+                "Iris Apfel (bold maximalism)",
+                "Steve Jobs (minimal uniformity)",
+                "Rihanna (fearless experimentation)"
+            ]
+        },
+        'comfort_vs_style': {
+            'question': "How do you balance comfort and style?",
+            'options': [
+                "Comfort is my top priority",
+                "Equal balance of both",
+                "Style first, but must be wearable",
+                "Willing to sacrifice comfort for look",
+                "Depends on the occasion"
+            ]
+        },
+        'pattern_preference': {
+            'question': "What's your approach to patterns and prints?",
+            'options': [
+                "Minimal patterns, prefer solid colors",
+                "Classic patterns (stripes, checks)",
+                "Bold, artistic prints",
+                "Mix of patterns and textures",
+                "Trendy seasonal patterns"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"style_personality_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Discover My Style Personality", type="primary"):
+        personality = analyze_style_personality(responses)
+        show_style_personality_results(personality)
+
+def analyze_style_personality(responses):
+    """Enhanced analysis of quiz responses to determine style personality"""
+    prompt = f"""Based on these detailed style preferences:
+    Weekend style: {responses['weekend_style']}
+    Color approach: {responses['color_approach']}
+    Accessories: {responses['accessories']}
+    Shopping: {responses['shopping']}
+    Outfit planning: {responses['outfit_planning']}
+    Style icons: {responses['style_icons']}
+    Comfort vs style: {responses['comfort_vs_style']}
+    Pattern preference: {responses['pattern_preference']}
+    
+    Analyze these responses to determine the person's primary and secondary style personalities.
+    Consider these style types:
+    - Classic (timeless, polished, coordinated)
+    - Romantic (feminine, soft, detailed)
+    - Creative (artistic, unique, experimental)
+    - Minimalist (clean, simple, modern)
+    - Trendy (current, fashion-forward)
+    - Dramatic (bold, statement-making)
+    - Natural (comfortable, casual, effortless)
+    - Elegant (sophisticated, refined, luxurious)
+    
+    Return the result in this format:
+    Primary: [Style Type]
+    Secondary: [Style Type]
+    Key Characteristics: [3-4 key traits]"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are an expert fashion psychologist specializing in personal style analysis."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+def show_style_personality_results(personality_analysis):
+    """Enhanced display of style personality results"""
+    # Parse the analysis
+    lines = personality_analysis.split('\n')
+    primary = lines[0].split(': ')[1]
+    secondary = lines[1].split(': ')[1]
+    characteristics = lines[2].split(': ')[1]
+    
+    # Display results
+    st.success("Your Style Analysis Complete!")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"""
+            ### Primary Style: {primary}
+            This is your dominant style preference and should guide most of your wardrobe choices.
+        """)
+    
+    with col2:
+        st.markdown(f"""
+            ### Secondary Style: {secondary}
+            This style influence adds depth and versatility to your primary style.
+        """)
+    
+    st.markdown("### Key Characteristics")
+    st.markdown(characteristics)
+    
+    # Style recommendations based on combination
+    st.markdown("### Personalized Style Recommendations")
+    
+    recommendations = get_style_recommendations(primary, secondary)
+    
+    tabs = st.tabs(["Wardrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
+    
+    with tabs[0]:
+        st.markdown("#### Must-Have Pieces")
+        for item in recommendations['essentials']:
+            st.markdown(f"- {item}")
+    
+    with tabs[1]:
+        st.markdown("#### Your Ideal Color Palette")
+        st.markdown(recommendations['colors'])
+    
+    with tabs[2]:
+        st.markdown("#### Styling Tips")
+        for tip in recommendations['styling_tips']:
+            st.markdown(f"- {tip}")
+    
+    with tabs[3]:
+        st.markdown("#### Shopping Recommendations")
+        st.markdown(recommendations['shopping_guide'])
+    
+    # Action steps
+    st.markdown("### Next Steps")
+    st.markdown("""
+        1. Review your current wardrobe against these recommendations
+        2. Identify gaps in your wardrobe essentials
+        3. Plan your next shopping trip based on the guidelines
+        4. Experiment with combining your primary and secondary styles
+    """)
+
+def get_style_recommendations(primary, secondary):
+    """Get detailed style recommendations based on style combination"""
+    prompt = f"""Create detailed style recommendations for someone with:
+    Primary Style: {primary}
+    Secondary Style: {secondary}
+    
+    Include:
+    1. List of 10 wardrobe essentials
+    2. Ideal color palette description
+    3. 5 specific styling tips
+    4. Shopping guide with specific store recommendations
+    
+    Format as a JSON with keys: essentials, colors, styling_tips, shopping_guide"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a professional fashion stylist creating personalized recommendations."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    return json.loads(response.choices[0].message.content)
+
+def wardrobe_essentials_quiz():
+    """Quiz to determine essential pieces for user's lifestyle"""
+    st.markdown("### 👔 Wardrobe Essentials Quiz")
+    st.markdown("""
+        Let's identify the key pieces you need based on your lifestyle and preferences.
+        This will help you build a functional and versatile wardrobe.
+    """)
+    
+    questions = {
+        'lifestyle': {
+            'question': "What best describes your daily activities?",
+            'options': [
+                "Corporate office work",
+                "Creative/casual workplace",
+                "Active/on-the-go",
+                "Work from home",
+                "Mix of formal and casual"
+            ]
+        },
+        'climate': {
+            'question': "What's your primary climate?",
+            'options': [
+                "Four distinct seasons",
+                "Mostly warm/hot",
+                "Mostly cool/cold",
+                "Mild year-round",
+                "Extreme temperature changes"
+            ]
+        },
+        'priorities': {
+            'question': "What's most important in your clothing?",
+            'options': [
+                "Comfort and practicality",
+                "Professional appearance",
+                "Style and fashion",
+                "Versatility",
+                "Durability"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"essentials_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Get My Essentials List", type="primary"):
+        essentials = analyze_wardrobe_essentials(responses)
+        show_wardrobe_essentials_results(essentials)
+
+def analyze_wardrobe_essentials(responses):
+    """Analyze quiz responses to determine wardrobe essentials"""
+    prompt = f"""Based on these factors:
+    Lifestyle: {responses['lifestyle']}
+    Climate: {responses['climate']}
+    Priorities: {responses['priorities']}
+    
+    Create a list of 10 essential wardrobe pieces that would best serve this person.
+    Return the list with each item on a new line."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a wardrobe planning expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip().split('\n')
+
+def show_wardrobe_essentials_results(essentials):
+    """Display wardrobe essentials results"""
+    st.success("Your Wardrobe Essentials")
+    
+    st.markdown("### Must-Have Pieces")
+    for i, item in enumerate(essentials, 1):
+        st.markdown(f"{i}. {item}")
+    
+    st.markdown("### Building Your Wardrobe")
+    st.markdown("""
+        Tips for collecting your essentials:
+        - Focus on quality over quantity
+        - Choose versatile pieces that work together
+        - Consider your color palette
+        - Invest in good basics first
+        - Add statement pieces gradually
+    """)
+    
+    # Check against current wardrobe
+    user_clothing = load_user_clothing()
+    if not user_clothing.empty:
+        st.markdown("### Wardrobe Gap Analysis")
+        missing_items = []
+        for essential in essentials:
+            # Check if any similar items exist in wardrobe
+            if not any(essential.lower() in item.lower() for item in user_clothing['name']):
+                missing_items.append(essential)
+        
+        if missing_items:
+            st.markdown("#### Items to Consider Adding:")
+            for item in missing_items:
+                st.markdown(f"- {item}")
+        else:
+            st.success("You have items matching all the essentials!")
 
 def get_color_analysis(skin_hex, hair_hex, eye_hex):
     """Get color analysis from GPT-4"""
@@ -3190,6 +3837,155 @@ def get_season_colors(season):
         }
     
     return color_recommendations[season]
+
+def get_color_info(color):
+    """Get color information from a hex code or color name"""
+    try:
+        # If color is a name, convert to hex
+        if not color.startswith('#'):
+            # Make API request to convert name to hex
+            url = f"https://www.thecolorapi.com/id?name={color}&format=json"
+            response = requests.get(url)
+            data = response.json()
+            hex_code = data['hex']['value']
+            name = color
+        else:
+            # Color is already hex, get name from API
+            hex_code = color
+            url = f"https://www.thecolorapi.com/id?hex={color.lstrip('#')}&format=json"
+            response = requests.get(url)
+            data = response.json()
+            name = data['name']['value']
+        
+        return {
+            'hex': hex_code,
+            'name': name,
+            'rgb': data['rgb']['value'],
+            'hsl': data['hsl']['value']
+        }
+    except Exception as e:
+        st.error(f"Error getting color information: {str(e)}")
+        return {
+            'hex': color,
+            'name': color,
+            'rgb': color,
+            'hsl': color
+        }
+
+def get_image_colors(image_bytes):
+    """Extract colors from image using Imagga API"""
+    # Imagga API credentials
+    api_key = st.secrets["IMAGGA_API_KEY"]
+    api_secret = st.secrets["IMAGGA_API_SECRET"]
+    
+    # API endpoint
+    url = "https://api.imagga.com/v2/colors"
+    
+    # Request headers
+    headers = {
+        'accept': 'application/json',
+        'authorization': f'Basic {api_key}:{api_secret}'
+    }
+    
+    # Upload image
+    files = {'image': image_bytes}
+    
+    try:
+        response = requests.post(url, headers=headers, files=files)
+        data = response.json()
+        
+        if response.status_code == 200:
+            colors = data['result']['colors']
+            
+            # Extract dominant colors
+            background_colors = colors.get('background_colors', [])
+            foreground_colors = colors.get('foreground_colors', [])
+            image_colors = colors.get('image_colors', [])
+            
+            # Return all color information
+            return {
+                'background': background_colors,
+                'foreground': foreground_colors,
+                'image': image_colors
+            }
+        else:
+            st.error(f"API Error: {data.get('status', {}).get('text', 'Unknown error')}")
+            return None
+            
+    except Exception as e:
+        st.error(f"Error calling Imagga API: {str(e)}")
+        return None
+
+def show_color_swatch(hex_color, name):
+    """Display a color swatch with name and hex code"""
+    st.markdown(f"""
+        <div style='
+            background-color: {hex_color}; 
+            width: 100px; 
+            height: 50px; 
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;'>
+        </div>
+        <span style='margin-left: 10px;'>{name} ({hex_color})</span>
+    """, unsafe_allow_html=True)
+
+def color_picker_tool():
+    """Tool to help users find their skin, hair, and eye color hex codes from photos"""
+    st.markdown("### 🎨 Color Picker Tool")
+    st.markdown("""
+        Upload a clear photo of yourself to automatically detect your:
+        - Skin tone
+        - Hair color
+        - Eye color
+        
+        **Tips for best results:**
+        - Use natural lighting
+        - Clear, well-lit photo
+        - Minimal makeup
+        - Neutral background
+    """)
+    
+    uploaded_file = st.file_uploader("Upload your photo", type=['jpg', 'jpeg', 'png'])
+    
+    if uploaded_file:
+        # Display image
+        image = Image.open(uploaded_file)
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.image(image, caption="Your Photo", use_column_width=True)
+        
+        # Extract colors using Imagga API
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format=image.format)
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        with col2:
+            st.markdown("### Detected Colors")
+            colors = get_image_colors(img_byte_arr)
+            
+            if colors:
+                # Show foreground colors (usually includes skin, hair)
+                st.markdown("#### Your Colors")
+                for color in colors['foreground'][:5]:  # Show top 5 colors
+                    hex_code = color['html_code']
+                    name = color['closest_palette_color_name']
+                    show_color_swatch(hex_code, name)
+                    
+                    # Add copy button for hex code
+                    if st.button(f"Copy {hex_code}", key=f"copy_{hex_code}"):
+                        pyperclip.copy(hex_code)
+                        st.success(f"Copied {hex_code} to clipboard!")
+                
+                # Show all detected colors in expandable section
+                with st.expander("View All Detected Colors"):
+                    st.markdown("#### All Image Colors")
+                    for color in colors['image']:
+                        hex_code = color['html_code']
+                        name = color['closest_palette_color_name']
+                        percentage = color['percent']
+                        show_color_swatch(hex_code, f"{name} ({percentage:.1f}%)")
 
 # Main function
 def main():
