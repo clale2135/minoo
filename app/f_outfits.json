@@ -172,5 +172,31 @@
     ],
     "occasion": "Beach",
     "date_created": "2025-01-19 19:57:25"
+  },
+  {
+    "id": "b0dcd035-7f9a-42a7-a645-f071004aa73d",
+    "name": "Recommended Outfit 20250121_1445",
+    "items": [
+      {
+        "name": "black shirt",
+        "image_path": "uploads/M01T12-TN_Front.webp",
+        "type_of_clothing": "Shirt",
+        "color": "Black"
+      },
+      {
+        "name": "Flirty Flare Skirt",
+        "image_path": "uploads/MBJ-WB829-Womens-Flirty-Flare-Skirt-XS-RED_8d7bf4a0-b28a-4e8c-b8cd-c46d758fb2a2_1.89c843c6ab7288932dacb929a23114b1.webp",
+        "type_of_clothing": "Skirt",
+        "color": "Red"
+      },
+      {
+        "name": "minu",
+        "image_path": "uploads/istockphoto-1221134337-612x612.jpg",
+        "type_of_clothing": "Pants",
+        "color": "Black"
+      }
+    ],
+    "occasion": "Casual",
+    "date_created": "2025-01-21 14:45:55"
   }
 ]
