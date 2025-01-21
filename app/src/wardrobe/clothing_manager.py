@@ -5,6 +5,7 @@ from PIL import Image
 import uuid
 import openai
 from pydantic import BaseModel
+import plotly.express as px
 
 # Clothing Item Response Model
 class ClothingItemResponse(BaseModel):
@@ -337,5 +338,161 @@ def update_image_path(item_id, new_path):
     save_user_clothing(user_clothing)
 
 def clothing_data_insights():
-    st.title("Clothing Data Insights with GPT-4")
-    # ... rest of the function code ... 
+    """Display insights and analytics about the user's wardrobe"""
+    st.title("👕 Wardrobe Analytics")
+    
+    try:
+        # Load user's clothing data
+        df = pd.read_csv(f"{st.session_state.username}_clothing.csv")
+        
+        if len(df) == 0:
+            st.info("Add some clothes to your wardrobe to see insights!")
+            return
+            
+        # Display total items
+        st.subheader("Wardrobe Overview")
+        total_items = len(df)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Items", total_items)
+        with col2:
+            st.metric("Unique Categories", df['type_of_clothing'].nunique())
+        with col3:
+            st.metric("Total Value", f"${df['price'].sum():.2f}")
+            
+        # Clothing categories breakdown
+        st.subheader("Clothing Categories")
+        category_counts = df['type_of_clothing'].value_counts()
+        fig = px.pie(values=category_counts.values, 
+                    names=category_counts.index,
+                    title='Distribution of Clothing Types')
+        st.plotly_chart(fig)
+        
+        # Color analysis
+        st.subheader("Color Analysis")
+        color_counts = df['color'].value_counts()
+        fig = px.bar(x=color_counts.index, 
+                    y=color_counts.values,
+                    title='Color Distribution in Your Wardrobe',
+                    labels={'x': 'Color', 'y': 'Count'})
+        st.plotly_chart(fig)
+        
+        # Season distribution
+        st.subheader("Seasonal Distribution")
+        season_counts = df['season'].str.split(',').explode().str.strip().value_counts()
+        fig = px.bar(x=season_counts.index, 
+                    y=season_counts.values,
+                    title='Seasonal Distribution of Clothes',
+                    labels={'x': 'Season', 'y': 'Count'})
+        st.plotly_chart(fig)
+        
+        # Price analysis
+        st.subheader("Price Analysis")
+        col1, col2 = st.columns(2)
+        with col1:
+            fig = px.box(df, y='price', title='Price Distribution')
+            st.plotly_chart(fig)
+        with col2:
+            avg_price_by_category = df.groupby('type_of_clothing')['price'].mean().sort_values(ascending=False)
+            fig = px.bar(x=avg_price_by_category.index, 
+                        y=avg_price_by_category.values,
+                        title='Average Price by Category',
+                        labels={'x': 'Category', 'y': 'Average Price ($)'})
+            st.plotly_chart(fig)
+            
+        # Most and least expensive items
+        st.subheader("Price Insights")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("Most Expensive Items:")
+            most_expensive = df.nlargest(5, 'price')[['name', 'type_of_clothing', 'price']]
+            st.dataframe(most_expensive)
+        with col2:
+            st.write("Most Affordable Items:")
+            least_expensive = df.nsmallest(5, 'price')[['name', 'type_of_clothing', 'price']]
+            st.dataframe(least_expensive)
+            
+        # Style analysis
+        if 'style' in df.columns:
+            st.subheader("Style Analysis")
+            style_counts = df['style'].value_counts()
+            fig = px.pie(values=style_counts.values, 
+                        names=style_counts.index,
+                        title='Distribution of Style Categories')
+            st.plotly_chart(fig)
+            
+        # Wardrobe gaps analysis
+        st.subheader("Wardrobe Gaps Analysis")
+        
+        # Check seasonal balance
+        season_balance = season_counts.to_dict()
+        seasons = ['Spring', 'Summer', 'Fall', 'Winter']
+        missing_seasons = [s for s in seasons if s not in season_balance or season_balance[s] < 5]
+        
+        # Check basic essentials
+        essential_categories = {
+            'Tops': ['T-shirt', 'Blouse', 'Shirt'],
+            'Bottoms': ['Pants', 'Jeans', 'Skirt'],
+            'Outerwear': ['Jacket', 'Coat'],
+            'Dresses': ['Dress'],
+            'Shoes': ['Sneakers', 'Boots', 'Flats']
+        }
+        
+        missing_essentials = []
+        for category, items in essential_categories.items():
+            category_items = df[df['type_of_clothing'].isin(items)]
+            if len(category_items) < 2:
+                missing_essentials.append(category)
+        
+        # Display recommendations
+        st.write("#### Wardrobe Recommendations")
+        
+        if missing_seasons:
+            st.write("Consider adding more items for these seasons:")
+            for season in missing_seasons:
+                st.write(f"- {season}")
+                
+        if missing_essentials:
+            st.write("Consider adding these essential categories:")
+            for category in missing_essentials:
+                st.write(f"- {category}")
+                
+        # Display versatility score
+        versatility_score = calculate_versatility_score(df)
+        st.metric("Wardrobe Versatility Score", f"{versatility_score}/100")
+        
+    except FileNotFoundError:
+        st.info("Add some clothes to your wardrobe to see insights!")
+    except Exception as e:
+        st.error(f"Error analyzing wardrobe data: {str(e)}")
+
+def calculate_versatility_score(df):
+    """Calculate a versatility score for the wardrobe"""
+    score = 0
+    
+    # Basic categories coverage (30 points)
+    essential_categories = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Shoes']
+    categories_present = df['type_of_clothing'].unique()
+    score += (len(set(categories_present) & set(essential_categories)) / len(essential_categories)) * 30
+    
+    # Seasonal balance (30 points)
+    seasons = df['season'].str.split(',').explode().str.strip().value_counts()
+    season_balance = 30 - (seasons.std() / seasons.mean() * 10 if len(seasons) > 0 else 30)
+    score += max(0, season_balance)
+    
+    # Color variety (20 points)
+    color_count = df['color'].nunique()
+    score += min(20, (color_count / 10) * 20)
+    
+    # Price efficiency (10 points)
+    if 'price' in df.columns:
+        price_range = df['price'].max() - df['price'].min()
+        price_score = 10 - (price_range / df['price'].mean() / 2)
+        score += max(0, price_score)
+    
+    # Style variety (10 points)
+    if 'style' in df.columns:
+        style_count = df['style'].nunique()
+        score += min(10, (style_count / 5) * 10)
+    
+    return round(score) 
