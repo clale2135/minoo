@@ -1,0 +1,79 @@
+[
+  {
+    "item": {
+      "position": 13,
+      "title": "Coach Boucle Mini Skirt",
+      "product_link": "https://www.google.com/shopping/product/5520748695147925981?gl=us",
+      "product_id": "5520748695147925981",
+      "serpapi_product_api": "https://serpapi.com/search.json?device=desktop&engine=google_product&gl=us&google_domain=google.com&hl=en&product_id=5520748695147925981",
+      "source": "COACH",
+      "source_icon": "https://serpapi.com/searches/67902b8812084769ad505fc6/images/731a9e1d8b98174bf08e7c405ea2b0eb8b480e82f23e3b147db22bc5367ddde5.png",
+      "price": "$295.00",
+      "extracted_price": 295.0,
+      "extensions": [
+        "Free 30-day returns"
+      ],
+      "thumbnail": "https://serpapi.com/searches/67902b8812084769ad505fc6/images/731a9e1d8b98174bf08e7c405ea2b0ebc0f6dfe74766af1c31a913b0ef5d4167.webp",
+      "thumbnails": [
+        "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcRP1qZHsbs3SdXlJnc9EocVE63ZP7RHYp0yypeX3zGQsUceiD6DuqVhr03DyxunCKCTT0fVaAAYivRFzmqoMWVI0j9cejs-iGwWtN6PicVAasGKCOD53POUbPc",
+        "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcRL605k1x8L_ddbb4UnvprnKyXJxDO2ZvQ3365GEjVOrruC5CIYXjKj4bT0oW-BMRBBihzs191d8M4Q7OpDxBgO4tNLYLLyQksfj9bCsLoWosaCEHHoRYBs7w",
+        "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcTElqyXztfgI0Jb48o_8PIxWZz-0WAPJA2UM5cbM8Hn7-asdEmz4JB66rmlPZwiO8NJ2968lEnMJZH6uVJqhZGRLPMXzr7hLcVp1Pa1CQ",
+        "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcT6HA9TMW_BxjyosHBa3PkdTwE63r-BZlskMIHr96mqz1Do5EGmikdw3bJgzlfZKcddO2aCNU1MKXmXMEkOwYSEzpDOgiV31Fxo99KYM7AeXgiAe7kEKawCQQ",
+        "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcT6JdhJnNSX6o9pEbpXT3SsPaK6Oj4kik79L4cqNV6bZg_ldc1pqiNqAxYahuKHs5NneNnLNKP2KHTv9NqntKQdvhbzDCRVqAhOAc1c56VKgLlo9xUViXfYFY0"
+      ],
+      "delivery": "Free delivery"
+    },
+    "date_added": "2025-01-21 18:20:14"
+  },
+  {
+    "item": {
+      "position": 2,
+      "title": "MESHKI Taylor Draped Stretch Crepe Midi Dress",
+      "product_link": "https://www.google.com/shopping/product/16399687874216717819?gl=us",
+      "product_id": "16399687874216717819",
+      "serpapi_product_api": "https://serpapi.com/search.json?device=desktop&engine=google_product&gl=us&google_domain=google.com&hl=en&product_id=16399687874216717819",
+      "source": "Meshki",
+      "source_icon": "https://serpapi.com/searches/679033a0245c1176a93dee29/images/961ca413eb9b21e526e851490dd45b1d41bc1d22e6d1687e50f338154031bbee.png",
+      "price": "$145.00",
+      "extracted_price": 145.0,
+      "rating": 4.7,
+      "reviews": 7,
+      "extensions": [
+        "30-day returns"
+      ],
+      "thumbnail": "https://serpapi.com/searches/679033a0245c1176a93dee29/images/961ca413eb9b21e526e851490dd45b1d40771912e2ec7adc014e99c163c4bb60.webp",
+      "thumbnails": [
+        "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcTCxip3SYZSpfVbdqcPySxeIU1DffHPFbYusb-lyNklvWAvxnIpDWVzUFJ_URUELdONFbJPg9QPtaKazQB2RgXkhgEmzPjeKTWcRo7bztR34A141iKIzfCt",
+        "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcR82sMw-zkwPKIcg1-SBlCbmxwcEa1zk2QHRhLqgf2htIbu5KBlgHB43TS624YQlGR0L39s0NYUdlOjdnRkjw70-qraNJAdhbwGR01LVTGmWr5j1Axgv370Mg"
+      ],
+      "delivery": "Free delivery"
+    },
+    "date_added": "2025-01-21 18:54:15"
+  },
+  {
+    "item": {
+      "position": 1,
+      "title": "Moxeay Women's Pleated Circle Skater Skirt",
+      "product_link": "https://www.google.com/shopping/product/12356072358710555187?gl=us",
+      "product_id": "12356072358710555187",
+      "serpapi_product_api": "https://serpapi.com/search.json?device=desktop&engine=google_product&gl=us&google_domain=google.com&hl=en&product_id=12356072358710555187",
+      "source": "Amazon.com - Seller",
+      "source_icon": "https://serpapi.com/searches/67902b8812084769ad505fc6/images/731a9e1d8b98174bf08e7c405ea2b0eb35f5a340c1b77f006cf64914f8b465a5.png",
+      "price": "$16.88",
+      "extracted_price": 16.88,
+      "old_price": "$23",
+      "extracted_old_price": 23,
+      "thumbnail": "https://serpapi.com/searches/67902b8812084769ad505fc6/images/731a9e1d8b98174bf08e7c405ea2b0eb7082c17d3c999a74f747d234ca6a3665.webp",
+      "thumbnails": [
+        "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcS4pycY0MPTNpH0PW-RVC6gupFNCk-q6XHG0-GhFc44G_NJlaIF6AfX-xNXFNMTMi6R3Tw6n6A9OsmbQGl6JnBTeMwYKhfmK1LCsZnQPHpbbcoIbpVZlihBCg",
+        "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcSqKM7AjUvgnkiNXDE1aRHJe3QYG5Is-RsF7BS4XyqeT4oazyeDcz4tmHWaqqpjX8PqYyVlEGEd1WQfG4wUJfSNf9_NVPSskQ",
+        "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcSNiYXq5LZ7w-nGTu3O08Xgudhv5F4vEach8FEtQoLZ3safjlVqi6n-5m-nJ3O_U9ceN0E7sCUUREkIkZ67HHzA4M-tcoQv"
+      ],
+      "tag": "26% OFF",
+      "extensions": [
+        "26% OFF"
+      ]
+    },
+    "date_added": "2025-01-21 19:03:22"
+  }
+]

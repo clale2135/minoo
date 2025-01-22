@@ -3077,51 +3077,62 @@ def analyze_colors_with_imagga(image_bytes):
 
 def determine_color_season(colors_data):
     """Use GPT-4 to determine color season based on Imagga color analysis"""
-    if not colors_data or 'result' not in colors_data:
-        return None
+    try:
+        if not colors_data or 'result' not in colors_data:
+            return None
+            
+        # Extract dominant colors and their properties
+        colors = colors_data['result']['colors']
         
-    # Extract dominant colors and their properties
-    colors = colors_data['result']['colors']
-    
-    # Format color data for GPT-4
-    color_info = {
-        'background_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
-                            for c in colors.get('background_colors', [])],
-        'foreground_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
-                            for c in colors.get('foreground_colors', [])],
-        'image_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
-                        for c in colors.get('image_colors', [])]
-    }
-    
-    prompt = f"""Based on this color analysis of a person's photo:
-    
-    Dominant colors (hex codes and percentages):
-    {json.dumps(color_info, indent=2)}
-    
-    Please determine:
-    1. Their likely color season (Spring, Summer, Autumn, or Winter)
-    2. Whether they have warm or cool undertones
-    3. A list of 5-7 colors that would be most flattering for them
-    
-    Return your response in this exact JSON format:
-    {{
-        "season": "Season name",
-        "undertone": "Warm or Cool",
-        "flattering_colors": ["color1", "color2", "etc"],
-        "explanation": "Brief explanation of the analysis"
-    }}"""
-    
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
+        # Format color data for GPT-4
+        color_info = {
+            'background_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                                for c in colors.get('background_colors', [])],
+            'foreground_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                                for c in colors.get('foreground_colors', [])],
+            'image_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                            for c in colors.get('image_colors', [])]
+        }
+        
+        prompt = f"""Based on this color analysis of a person's photo:
+        
+        Dominant colors (hex codes and percentages):
+        {json.dumps(color_info, indent=2)}
+        
+        Please determine:
+        1. Their likely color season (Spring, Summer, Autumn, or Winter)
+        2. Whether they have warm or cool undertones
+        3. A list of 5-7 colors that would be most flattering for them
+        
+        Return your response in this exact JSON format:
+        {{
+            "season": "Season name",
+            "undertone": "Warm or Cool",
+            "flattering_colors": ["color1", "color2", "etc"],
+            "explanation": "Brief explanation of the analysis"
+        }}"""
+        
+        messages = [
             {"role": "system", "content": "You are a color analysis expert."},
             {"role": "user", "content": prompt}
         ]
-    )
-    
-    try:
-        return json.loads(response.choices[0].message.content)
-    except:
+        
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=messages
+            )
+            try:
+                return json.loads(response.choices[0].message.content)
+            except json.JSONDecodeError as e:
+                st.error(f"Error parsing response: {str(e)}")
+                return None
+        except Exception as e:
+            st.error(f"Error calling GPT-4 API: {str(e)}")
+            return None
+            
+    except Exception as e:
+        st.error(f"Error processing color data: {str(e)}")
         return None
 
 def face_shape_quiz():
@@ -4023,10 +4034,12 @@ def main():
                "Choose a page",
                ["Home", "Image Uploader and Display", "Saved Clothes", 
                 "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                "Saved Outfits", "Outfit Calendar", "Style Quizzes"],
+                "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+                "Shopping Recommendations"],  # Added new page
                index=["Home", "Image Uploader and Display", "Saved Clothes", 
                       "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                      "Saved Outfits", "Outfit Calendar", "Style Quizzes"].index(current_page)
+                      "Saved Outfits", "Outfit Calendar", "Style Quizzes",
+                      "Shopping Recommendations"].index(current_page)
            )
            
            # Show the selected page
@@ -4046,6 +4059,8 @@ def main():
                schedule_outfits()
            elif page == "Style Quizzes":
                style_quizzes()
+           elif page == "Shopping Recommendations":
+               shopping_recommendations()
    else:
        st.markdown("""
            <div class='welcome-msg'>
@@ -4059,6 +4074,448 @@ def main():
            login()
        elif auth_page == "Create Account":
            create_account()
+
+# Add these new functions
+def shopping_recommendations():
+    """Generate personalized shopping recommendations"""
+    st.title("🛍️ Personalized Shopping Recommendations")
+    
+    # Create tabs for different recommendation types
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "👕 Similar to My Clothes",
+        "❓ Based on Questions",
+        "👗 Complete an Outfit",
+        "💝 My Wishlist"  # New tab
+    ])
+    
+    with tab1:
+        similar_clothes_recommendations()
+    
+    with tab2:
+        question_based_recommendations()
+    
+    with tab3:
+        complete_outfit_recommendations()
+        
+    with tab4:
+        view_wishlist()
+
+def view_wishlist():
+    """View and manage wishlist items"""
+    st.markdown("### My Wishlist")
+    
+    # Verify user is logged in
+    if "username" not in st.session_state:
+        st.error("Please log in to view your wishlist.")
+        return
+        
+    wishlist_file = f"{st.session_state.username}_wishlist.json"
+    
+    # Check if wishlist file exists
+    if not os.path.exists(wishlist_file):
+        st.info("Your wishlist is empty. Start saving items you like!")
+        return
+        
+    try:
+        # Read wishlist file
+        with open(wishlist_file, 'r') as f:
+            wishlist = json.load(f)
+            
+        if not wishlist:
+            st.info("Your wishlist is empty. Start saving items you like!")
+            return
+            
+        # Add sort options
+        sort_by = st.selectbox(
+            "Sort by:",
+            ["Date Added (Newest)", "Date Added (Oldest)", "Price (Low to High)", "Price (High to Low)"]
+        )
+        
+        # Sort wishlist items
+        try:
+            if sort_by == "Date Added (Newest)":
+                wishlist = sorted(wishlist, key=lambda x: x['date_added'], reverse=True)
+            elif sort_by == "Date Added (Oldest)":
+                wishlist = sorted(wishlist, key=lambda x: x['date_added'])
+            elif sort_by == "Price (Low to High)":
+                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')))
+            elif sort_by == "Price (High to Low)":
+                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')), reverse=True)
+        except (KeyError, ValueError) as e:
+            st.warning("Some items may have invalid price data. Sorting might not be accurate.")
+        
+        # Display items in grid
+        for i in range(0, len(wishlist), 3):
+            cols = st.columns(3)
+            for j, col in enumerate(cols):
+                if i + j < len(wishlist):
+                    item_data = wishlist[i + j]
+                    item = item_data['item']
+                    with col:
+                        # Display product image
+                        if 'thumbnail' in item:
+                            st.image(item['thumbnail'], use_column_width=True)
+                        
+                        # Display product details
+                        st.markdown(f"""
+                            **{item.get('title', 'No title')[:50]}...**  
+                            💰 {item.get('price', 'Price not available')}  
+                            {f"⭐ {item.get('rating')} ({item.get('reviews', '0')})" if 'rating' in item else ''}  
+                            📅 Added: {item_data['date_added']}
+                        """)
+                        
+                        # Add link to product
+                        if 'link' in item:
+                            st.markdown(f"[Shop Now]({item['link']})")
+                        
+                        # Remove from wishlist button
+                        if st.button("🗑️ Remove", key=f"remove_{i}_{j}"):
+                            wishlist.pop(i + j)
+                            with open(wishlist_file, 'w') as f:
+                                json.dump(wishlist, f, indent=2)
+                            st.experimental_rerun()
+        
+        # Add export option
+        if st.button("📥 Export Wishlist"):
+            export_wishlist(wishlist)
+            
+    except json.JSONDecodeError:
+        st.error("Error reading wishlist file. The file may be corrupted.")
+    except Exception as e:
+        st.error(f"An error occurred while loading your wishlist: {str(e)}")
+
+def export_wishlist(wishlist):
+    """Export wishlist to CSV"""
+    try:
+        # Create DataFrame from wishlist
+        data = []
+        for item_data in wishlist:
+            item = item_data['item']
+            data.append({
+                'Title': item.get('title', 'No title'),
+                'Price': item.get('price', 'N/A'),
+                'Rating': item.get('rating', 'N/A'),
+                'Reviews': item.get('reviews', 'N/A'),
+                'Link': item.get('link', 'N/A'),
+                'Date Added': item_data['date_added']
+            })
+        
+        df = pd.DataFrame(data)
+        
+        # Convert DataFrame to CSV
+        csv = df.to_csv(index=False)
+        
+        # Create download button
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name="wishlist.csv",
+            mime="text/csv"
+        )
+    except Exception as e:
+        st.error(f"Error exporting wishlist: {str(e)}")
+
+def save_to_wishlist(item):
+    """Save an item to the user's wishlist"""
+    if 'username' not in st.session_state:
+        st.error("Please log in to save items to your wishlist.")
+        return
+
+    wishlist_file = f"{st.session_state.username}_wishlist.json"
+    wishlist = []
+
+    try:
+        # Load existing wishlist if it exists
+        if os.path.exists(wishlist_file):
+            with open(wishlist_file, 'r') as f:
+                wishlist = json.load(f)
+
+        # Add new item with timestamp
+        wishlist.append({
+            'item': item,
+            'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+        # Save updated wishlist
+        with open(wishlist_file, 'w') as f:
+            json.dump(wishlist, f, indent=2)
+            
+        st.success("Item added to wishlist!")
+        
+    except Exception as e:
+        st.error(f"Error saving to wishlist: {str(e)}")
+
+def similar_clothes_recommendations():
+    """Find clothes similar to user's existing wardrobe"""
+    st.markdown("### Find Similar Clothes")
+    
+    # Load user's wardrobe
+    user_clothing = load_user_clothing()
+    if user_clothing.empty:
+        st.info("Add some clothes to your wardrobe first to get recommendations!")
+        return
+    
+    # Let user select which item to find similar clothes for
+    selected_item = st.selectbox(
+        "Select an item from your wardrobe to find similar pieces:",
+        options=user_clothing['name'].tolist()
+    )
+    
+    if selected_item:
+        item_details = user_clothing[user_clothing['name'] == selected_item].iloc[0]
+        
+        # Show selected item details
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if os.path.exists(item_details['image_path']):
+                st.image(item_details['image_path'], caption="Selected Item")
+        
+        with col2:
+            st.markdown(f"""
+                **Type:** {item_details['type_of_clothing']}  
+                **Color:** {item_details['color']}  
+                **Season:** {item_details['season']}
+            """)
+        
+        # Get similar items using SERP API
+        search_query = f"{item_details['color']} {item_details['type_of_clothing']} similar to {selected_item}"
+        recommendations = get_shopping_recommendations(search_query, "")
+        
+        if recommendations:
+            st.markdown("### Similar Items You Might Like")
+            display_shopping_recommendations(recommendations, "similar")
+
+def question_based_recommendations():
+    """Get recommendations based on user's answers to questions"""
+    st.markdown("### Find Clothes Based on Your Preferences")
+    
+    # Questions to help narrow down recommendations
+    occasion = st.text_input(
+        "What occasion are you shopping for?",
+        placeholder="e.g., Casual, Work, Special Event, Workout, Vacation"
+    )
+    
+    budget = st.text_input(
+        "What's your budget range?",
+        placeholder="e.g., Budget, Mid-range, High-end, Luxury"
+    )
+    
+    style_preference = st.text_input(
+        "What styles do you prefer?",
+        placeholder="e.g., Classic, Trendy, Bohemian, Minimalist, Streetwear, Elegant"
+    )
+    
+    color_preference = st.color_picker("Choose a color you're looking for:", "#000000")
+    
+    if st.button("Find Recommendations"):
+        if not occasion or not budget or not style_preference:
+            st.warning("Please fill in all fields to get personalized recommendations.")
+            return
+            
+        # Construct search query based on answers
+        search_query = f"{occasion} {style_preference} clothing {budget}"
+        recommendations = get_shopping_recommendations(search_query, "")
+        
+        if recommendations:
+            st.markdown("### Recommended Items")
+            display_shopping_recommendations(recommendations, "questions")
+
+def complete_outfit_recommendations():
+    """Find items to complete an outfit"""
+    st.markdown("### Complete Your Outfit")
+    
+    # Load user's saved outfits and wardrobe
+    outfits = load_saved_outfits()
+    user_clothing = load_user_clothing()
+    
+    if user_clothing.empty:
+        st.info("Add some clothes to your wardrobe first to get completion recommendations!")
+        return
+    
+    # Option to start from saved outfit or create new
+    start_from = st.radio(
+        "How would you like to start?",
+        ["Start from a saved outfit", "Build a new outfit"]
+    )
+    
+    if start_from == "Start from a saved outfit":
+        if not outfits:
+            st.info("Create some outfits first to use this feature!")
+            return
+            
+        # Select saved outfit
+        outfit_names = [outfit['name'] for outfit in outfits]
+        selected_outfit = st.selectbox("Select an outfit to complete:", outfit_names)
+        
+        if selected_outfit:
+            outfit = next((o for o in outfits if o['name'] == selected_outfit), None)
+            if outfit:
+                # Display current outfit items
+                st.markdown("### Current Outfit Items")
+                cols = st.columns(len(outfit['items']))
+                for idx, item in enumerate(outfit['items']):
+                    with cols[idx]:
+                        if os.path.exists(item.get('image_path', '')):
+                            st.image(item['image_path'], caption=item.get('name', ''))
+                
+                # Suggest what's missing
+                missing_items = suggest_missing_items(outfit['items'])
+                if missing_items:
+                    st.markdown("### Suggested Items to Complete the Outfit")
+                    for idx, item in enumerate(missing_items):
+                        recommendations = get_shopping_recommendations(item, "")
+                        if recommendations:
+                            st.markdown(f"#### {item}")
+                            display_shopping_recommendations(recommendations, f"complete_{idx}")
+    
+    else:  # Build a new outfit
+        # Let user select base items
+        st.markdown("### Select Base Items for Your Outfit")
+        selected_items = st.multiselect(
+            "Choose items from your wardrobe:",
+            options=user_clothing['name'].tolist()
+        )
+        
+        if selected_items:
+            # Display selected items
+            st.markdown("### Selected Items")
+            cols = st.columns(len(selected_items))
+            items_details = []
+            for idx, item_name in enumerate(selected_items):
+                item = user_clothing[user_clothing['name'] == item_name].iloc[0]
+                items_details.append({
+                    'name': item_name,
+                    'type_of_clothing': item.get('type_of_clothing') or item.get('type') or item.get('category'),
+                    'color': item.get('color', ''),
+                    'image_path': item.get('image_path', '')
+                })
+                with cols[idx]:
+                    if os.path.exists(item.get('image_path', '')):
+                        st.image(item['image_path'], caption=item_name)
+            
+            # Suggest completing items
+            missing_items = suggest_missing_items(items_details)
+            if missing_items:
+                st.markdown("### Suggested Items to Complete the Outfit")
+                for item in missing_items:
+                    recommendations = get_shopping_recommendations(item, "")
+                    if recommendations:
+                        st.markdown(f"#### {item}")
+                        display_shopping_recommendations(recommendations, f"complete_{idx}")
+
+def suggest_missing_items(outfit_items):
+    """Suggest items that would complete an outfit"""
+    # Extract types of clothing in the outfit, handling different data structures
+    current_types = []
+    for item in outfit_items:
+        # Handle both dictionary and object formats
+        if isinstance(item, dict):
+            item_type = item.get('type_of_clothing') or item.get('type') or item.get('category')
+        else:
+            # If item is an object/row from DataFrame
+            item_type = getattr(item, 'type_of_clothing', None) or getattr(item, 'type', None) or getattr(item, 'category', None)
+        
+        if item_type:
+            current_types.append(item_type.lower())
+    
+    # Basic outfit completion rules
+    outfit_rules = {
+        'tops': ['shirt', 'blouse', 't-shirt', 'sweater', 'top'],
+        'bottoms': ['pants', 'skirt', 'shorts', 'jeans'],
+        'shoes': ['sneakers', 'boots', 'heels', 'sandals'],
+        'accessories': ['necklace', 'earrings', 'bracelet', 'belt'],
+        'outerwear': ['jacket', 'coat', 'cardigan']
+    }
+    
+    # Check what's missing
+    missing_items = []
+    
+    # Check for main components
+    if not any(type in current_types for type in outfit_rules['tops']):
+        missing_items.append("Top")
+    if not any(type in current_types for type in outfit_rules['bottoms']):
+        missing_items.append("Bottom")
+    if not any(type in current_types for type in outfit_rules['shoes']):
+        missing_items.append("Shoes")
+    
+    # Suggest accessories if none present
+    if not any(type in current_types for type in outfit_rules['accessories']):
+        missing_items.append("Accessories")
+    
+    # Suggest outerwear based on season
+    if not any(type in current_types for type in outfit_rules['outerwear']):
+        missing_items.append("Outerwear")
+    
+    return missing_items
+
+def get_shopping_recommendations(search_query, style_context=""):
+    """Get shopping recommendations using SERP API"""
+    try:
+        # Get API key from Streamlit secrets
+        api_key = st.secrets["SERPAPI_KEY"]
+        
+        # Set up the parameters for the API call
+        params = {
+            "api_key": api_key,
+            "engine": "google_shopping",
+            "q": search_query,
+            "num": 6,
+            "price_low": 0,
+            "price_high": 1000,
+            "gl": "us"
+        }
+
+        # Make the API request
+        response = requests.get("https://serpapi.com/search", params=params)
+        data = response.json()
+
+        if "shopping_results" in data:
+            results = data["shopping_results"]
+            return results
+        else:
+            st.warning("No shopping results found.")
+            return None
+            
+    except KeyError:
+        st.error("SERP API key not found. Please check your secrets.toml file.")
+        return None
+    except Exception as e:
+        st.error(f"Error fetching shopping recommendations: {str(e)}")
+        return None
+
+def display_shopping_recommendations(recommendations, section_id=""):
+    """Display shopping recommendations in a grid layout"""
+    if not recommendations:
+        return
+
+    # Create rows of 3 items each
+    for i in range(0, len(recommendations), 3):
+        cols = st.columns(3)
+        for j, col in enumerate(cols):
+            if i + j < len(recommendations):
+                item = recommendations[i + j]
+                with col:
+                    # Get the correct product link
+                    product_link = item.get('product_link', '')  # Direct Google Shopping link
+                    
+                    # Display product image
+                    if 'thumbnail' in item:
+                        st.image(item['thumbnail'], use_column_width=True)
+                    
+                    # Display link immediately under the image
+                    if product_link:
+                        st.markdown(f'<a href="{product_link}" target="_blank" style="display: block; text-align: center; margin: 5px 0;">🛍️ Shop Now</a>', unsafe_allow_html=True)
+                    
+                    # Display other product details
+                    title = item.get('title', 'No title')[:50]
+                    price = item.get('price', 'Price not available')
+                    source = item.get('source', '')
+                    
+                    st.markdown(f"""
+                        **{title}...**  
+                        💰 {price}  
+                        🏪 {source}
+                    """)
 
 
 
