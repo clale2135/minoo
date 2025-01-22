@@ -1,0 +1,36 @@
+[
+  {
+    "id": "837e7ca1-8eaa-4148-b066-e84ca76b884c",
+    "name": "Outfit 20250121_1126",
+    "items": [
+      {
+        "name": "New Item (1)",
+        "image_path": "uploads/fire.jpg",
+        "type_of_clothing": "Jacket",
+        "color": "Red, Yellow, Black, White, Multi-color"
+      }
+    ],
+    "occasion": "Casual",
+    "date_created": "2025-01-21 11:26:06"
+  },
+  {
+    "id": "ea0e3e83-a64c-4116-aa1b-77bf253c6f72",
+    "name": "Weather Outfit 20250121_1127",
+    "items": [
+      {
+        "name": "New Item",
+        "image_path": "uploads/fire.jpg",
+        "type_of_clothing": "Jacket",
+        "color": "Red, Yellow, Black, White, Multi-color"
+      },
+      {
+        "name": "New Item (1)",
+        "image_path": "uploads/fire.jpg",
+        "type_of_clothing": "Jacket",
+        "color": "Red, Yellow, Black, White, Multi-color"
+      }
+    ],
+    "occasion": "Casual",
+    "date_created": "2025-01-21 11:27:15"
+  }
+]
