@@ -1552,101 +1552,372 @@ def show_tutorial():
         st.rerun()
 
 def style_quiz():
-    """
-    Quiz to determine user's style aesthetic.
-    Returns True when completed.
-    """
-    if 'quiz_completed' not in st.session_state:
-        st.session_state.quiz_completed = False
+    """Run personal attributes quiz, avatar customization, and style quiz in sequence"""
+    if 'personal_attributes' not in st.session_state:
+        personal_attributes_quiz()
+    elif 'avatar_customized' not in st.session_state:
+        customize_avatar_and_profile()
+    else:
+        run_style_quiz()
 
-    if not st.session_state.quiz_completed:
-        st.title("🎨 Discover Your Style")
-        if st.session_state.get('retaking_quiz', False):
-            st.markdown("""
-                ### Retaking the Style Quiz
-                Let's update your style profile! Answer these questions based on your current preferences.
-            """)
-        else:
-            st.markdown("Let's find out your personal style aesthetic! Answer these questions to help us understand your fashion preferences.")
-
-        # Initialize session state for responses if not exists
-        if 'quiz_responses' not in st.session_state:
-            st.session_state.quiz_responses = {}
-
-        # Quiz questions
-        questions = {
-            'color_palette': {
-                'question': "Which color palette resonates with you the most?",
-                'options': [
-                    "Neutrals (Black, White, Beige, Gray)",
-                    "Pastels (Soft Pink, Light Blue, Mint)",
-                    "Bold & Bright (Red, Yellow, Electric Blue)",
-                    "Earth Tones (Brown, Olive, Rust)",
-                    "Monochrome (Black & White)",
-                    "Jewel Tones (Deep Purple, Emerald, Ruby)"
-                ]
-            },
-            'style_icons': {
-                'question': "Which style icon's aesthetic do you most admire?",
-                'options': [
-                    "Audrey Hepburn (Classic Elegance)",
-                    "Kate Moss (Effortless Cool)",
-                    "Rihanna (Bold and Experimental)",
-                    "Steve Jobs (Minimal Tech)",
-                    "Harry Styles (Gender-Fluid, Eclectic)",
-                    "Zendaya (Modern Sophistication)"
-                ]
-            },
-            'weekend_outfit': {
-                'question': "What's your go-to weekend outfit?",
-                'options': [
-                    "Athleisure (Leggings, Sneakers, Comfortable Tops)",
-                    "Casual Chic (Jeans, Blouse, Accessories)",
-                    "Bohemian (Flowy Dresses, Natural Fabrics)",
-                    "Edgy (Leather Jacket, Boots, Dark Colors)",
-                    "Preppy (Tailored Pieces, Classic Patterns)",
-                    "Streetwear (Oversized, Modern, Bold)"
-                ]
-            }
+def generate_dicebear_avatar(avatar_preferences):
+    """Generate avatar using DiceBear API"""
+    try:
+        # Valid hair styles for adventurer
+        hair_map = {
+            "Short": "short01",
+            "Medium": "short02",
+            "Long": "short03",
+            "Buzz Cut": "short04",
+            "Bald": "short05"
         }
-
-        # Display questions
-        for key, data in questions.items():
-            st.session_state.quiz_responses[key] = st.radio(
-                data['question'],
-                data['options'],
-                key=f"quiz_{key}"
-            )
-            st.markdown("---")
-
-        if st.button("✨ Discover My Style", type="primary"):
-            # Analyze responses
-            style = analyze_style_preferences(st.session_state.quiz_responses)
-            
-            # Save style to user profile
-            save_user_style(st.session_state.username, style)
-            st.session_state.style_aesthetic = style
-            st.session_state.quiz_completed = True
-            st.rerun()
-
-    else:  # Show results and transition to tutorial
-        st.success("🎉 Style Analysis Complete!")
-        st.markdown(f"""
-            ## Your Style Aesthetic: {st.session_state.style_aesthetic}
-            
-            We'll use this information to help create outfits that match your personal style!
-            
-            Click continue to learn how to use Your Digital Wardrobe.
-        """)
         
-        if st.button("Continue to Tutorial", type="primary"):
-            st.session_state.show_style_quiz = False
-            st.session_state.show_tutorial = True
-            st.session_state.quiz_completed = False  # Reset for next time
-            st.session_state.retaking_quiz = False  # Reset retaking flag
+        # Map color names to hex codes (without #)
+        hair_color_map = {
+            "black": "000000",
+            "brown": "8B4513",
+            "blonde": "FFD700",
+            "red": "8B0000"
+        }
+        
+        # Map skin tones to hex codes (without #)
+        skin_tone_map = {
+            "light": "FFE0BD",
+            "brown": "C68642",
+            "dark": "8D5524"
+        }
+        
+        # Get hex codes for selected colors
+        hair_color = hair_color_map.get(avatar_preferences['hair']['color'].lower(), "000000")
+        skin_color = skin_tone_map.get(avatar_preferences['skin_tone'].lower(), "FFE0BD")
+        
+        # Create URL for DiceBear API
+        base_url = "https://api.dicebear.com/7.x/adventurer/svg"
+        
+        # Build options string with valid parameters
+        options = {
+            "seed": "custom-seed",  # Add some randomness
+            "flip": "false",
+            "rotate": "0",
+            "scale": "100",
+            "hair": hair_map.get(avatar_preferences['hair']['length'], "short01"),
+            "skinColor": skin_color,
+            "hairColor": hair_color,
+            "size": "200"
+        }
+        
+        # Convert options to URL parameters
+        options_str = "&".join([f"{k}={v}" for k, v in options.items()])
+        
+        # Construct final URL
+        url = f"{base_url}?{options_str}"
+        
+        # Get the avatar
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            return response.content, url
+        else:
+            st.error(f"Error generating avatar: {response.status_code} - {response.text}")
+            st.error(f"URL attempted: {url}")
+            return None, None
+            
+    except Exception as e:
+        st.error(f"Error generating avatar: {str(e)}")
+        return None, None
+
+def customize_avatar_and_profile():
+    """Allow users to customize their avatar and profile"""
+    st.title("🎨 Customize Your Profile")
+    
+    with st.form("avatar_customization"):
+        # Create two columns for avatar preview and customization
+        col_preview, col_customize = st.columns([1, 2])
+        
+        with col_customize:
+            st.markdown("### Avatar Customization")
+            
+            # Avatar Base
+            col1, col2 = st.columns(2)
+            with col1:
+                skin_tone = st.select_slider(
+                    "Skin Tone",
+                    options=["light", "brown", "dark"],
+                    value="light"
+                )
+            with col2:
+                hair_color = st.select_slider(
+                    "Hair Color",
+                    options=["black", "brown", "blonde", "red"],
+                    value="brown"
+                )
+            
+            # Hair Style
+            hair_length = st.selectbox(
+                "Hair Style",
+                ["Short", "Medium", "Long", "Buzz Cut", "Bald"]
+            )
+        
+        # Rest of the profile customization remains the same
+        st.markdown("### Profile Details")
+        
+        # Style Preferences
+        style_keywords = st.multiselect(
+            "Select keywords that describe your style",
+            ["Classic", "Modern", "Bohemian", "Streetwear", "Minimalist", 
+             "Vintage", "Preppy", "Edgy", "Romantic", "Athletic",
+             "Elegant", "Casual", "Artistic", "Professional", "Eclectic"],
+            max_selections=5
+        )
+        
+        # Favorite Colors
+        favorite_colors = st.multiselect(
+            "Select your favorite colors to wear",
+            ["Black", "White", "Navy", "Gray", "Beige", "Brown",
+             "Red", "Blue", "Green", "Yellow", "Purple", "Pink",
+             "Orange", "Gold", "Silver"],
+            max_selections=5
+        )
+        
+        # Bio
+        bio = st.text_area(
+            "Write a short bio about your style journey",
+            max_chars=200,
+            placeholder="Tell us about your style journey, preferences, and goals..."
+        )
+        
+        # Social Media Integration
+        st.markdown("#### Social Media (Optional)")
+        col8, col9 = st.columns(2)
+        with col8:
+            instagram = st.text_input("Instagram Handle", placeholder="@username")
+        with col9:
+            pinterest = st.text_input("Pinterest Username", placeholder="username")
+        
+        # Style Goals
+        style_goals = st.multiselect(
+            "What are your style goals?",
+            ["Build a capsule wardrobe", "Develop a signature style",
+             "Dress more professionally", "Express creativity through fashion",
+             "Shop more sustainably", "Mix and match better",
+             "Find better-fitting clothes", "Try new styles",
+             "Dress more confidently", "Organize wardrobe better"],
+            max_selections=3
+        )
+        
+        # Submit button
+        submit = st.form_submit_button("Save Profile & Continue to Style Quiz")
+        
+        # Preview avatar in the left column
+        with col_preview:
+            st.markdown("### Avatar Preview")
+            
+            # Create temporary avatar preferences for preview
+            temp_preferences = {
+                "skin_tone": skin_tone,
+                "hair": {
+                    "length": hair_length,
+                    "color": hair_color
+                }
+            }
+            
+            # Generate and display avatar preview
+            avatar_svg, avatar_url = generate_dicebear_avatar(temp_preferences)
+            if avatar_svg:
+                st.markdown(avatar_svg.decode(), unsafe_allow_html=True)
+        
+        if submit:
+            # Save avatar and profile preferences to session state
+            st.session_state.avatar_preferences = temp_preferences
+            
+            # Generate and save final avatar
+            final_avatar_svg, final_avatar_url = generate_dicebear_avatar(temp_preferences)
+            if final_avatar_svg:
+                st.session_state.avatar_svg = final_avatar_svg
+                st.session_state.avatar_url = final_avatar_url
+            
+            st.session_state.profile_preferences = {
+                "style_keywords": style_keywords,
+                "favorite_colors": favorite_colors,
+                "bio": bio,
+                "social_media": {
+                    "instagram": instagram,
+                    "pinterest": pinterest
+                },
+                "style_goals": style_goals
+            }
+            
+            st.session_state.avatar_customized = True
+            
+            # Show success message
+            st.success("Profile saved! Let's continue to the style quiz!")
+            time.sleep(2)
             st.rerun()
 
-    return False
+def personal_attributes_quiz():
+    """Quiz to gather physical characteristics and preferences"""
+    st.title("👤 Personal Attributes Quiz")
+    st.markdown("""
+        Before we determine your style, let's gather some information about you.
+        This will help us provide more personalized style recommendations.
+    """)
+    
+    # Create form for attributes
+    with st.form("personal_attributes_form"):
+        # Basic Information
+        st.markdown("### Basic Information")
+        gender = st.selectbox(
+            "Gender",
+            ["Female", "Male", "Non-binary", "Prefer not to say"]
+        )
+        
+        age = st.number_input(
+            "Age",
+            min_value=13,
+            max_value=120,
+            value=25
+        )
+        
+        # Physical Characteristics
+        st.markdown("### Physical Characteristics")
+        
+        # Height in ft/in
+        col1, col2 = st.columns(2)
+        with col1:
+            feet = st.number_input("Height (feet)", min_value=3, max_value=8, value=5)
+        with col2:
+            inches = st.number_input("Height (inches)", min_value=0, max_value=11, value=6)
+        height_value = (feet * 30.48) + (inches * 2.54)  # Store in cm internally
+        
+        # Weight in lbs
+        weight_lbs = st.number_input(
+            "Weight (lbs)",
+            min_value=66,
+            max_value=550,
+            value=154
+        )
+        weight_value = weight_lbs * 0.45359237  # Store in kg internally
+        
+        # Body Shape Characteristics
+        st.markdown("### Body Shape Details")
+        shoulder_width = st.select_slider(
+            "Shoulder Width",
+            options=["Narrow", "Average", "Broad"],
+            value="Average"
+        )
+        
+        neck_length = st.select_slider(
+            "Neck Length",
+            options=["Short", "Average", "Long"],
+            value="Average"
+        )
+        
+        leg_length = st.select_slider(
+            "Leg Length Proportion",
+            options=["Short", "Average", "Long"],
+            value="Average"
+        )
+        
+        # Fit Preferences
+        st.markdown("### Fit Preferences")
+        preferred_fit = st.multiselect(
+            "Preferred Clothing Fit",
+            ["Loose/Relaxed", "Regular/Classic", "Slim/Fitted", "Oversized"],
+            default=["Regular/Classic"]
+        )
+        
+        clothing_comfort = st.multiselect(
+            "What's most important in your clothing?",
+            ["Comfort", "Style", "Versatility", "Durability", "Easy Care"],
+            default=["Comfort", "Style"]
+        )
+        
+        # Areas to highlight/minimize
+        st.markdown("### Style Focus")
+        highlight_areas = st.multiselect(
+            "Areas you'd like to highlight",
+            ["Shoulders", "Arms", "Waist", "Legs", "Back", "None"],
+            default=["None"]
+        )
+        
+        minimize_areas = st.multiselect(
+            "Areas you'd like to minimize",
+            ["Shoulders", "Arms", "Waist", "Legs", "Back", "None"],
+            default=["None"]
+        )
+        
+        # Submit button
+        submit = st.form_submit_button("Continue to Style Quiz")
+        
+        if submit:
+            # Calculate BMI for general body type guidance
+            bmi = weight_value / ((height_value/100) ** 2)
+            
+            # Save all attributes to session state
+            st.session_state.personal_attributes = {
+                "gender": gender,
+                "age": age,
+                "height": {
+                    "feet": feet,
+                    "inches": inches,
+                    "cm": height_value  # Store cm for calculations
+                },
+                "weight": {
+                    "lbs": weight_lbs,
+                    "kg": weight_value  # Store kg for calculations
+                },
+                "bmi": bmi,
+                "shoulder_width": shoulder_width,
+                "neck_length": neck_length,
+                "leg_length": leg_length,
+                "preferred_fit": preferred_fit,
+                "clothing_comfort": clothing_comfort,
+                "highlight_areas": highlight_areas,
+                "minimize_areas": minimize_areas
+            }
+            
+            # Show success message and rerun to start style quiz
+            st.success("Personal attributes saved! Proceeding to style quiz...")
+            time.sleep(1)
+            st.rerun()  # Updated from experimental_rerun()
+
+def run_style_quiz():
+    """Run the main style quiz with personal attributes context"""
+    st.title("🎨 Style Personality Quiz")
+    
+    # Show summary of personal attributes
+    with st.expander("Your Personal Attributes Summary"):
+        attrs = st.session_state.personal_attributes
+        st.markdown(f"""
+            **Basic Info:** {attrs['gender']}, {attrs['age']} years old
+            
+            **Physical Characteristics:**
+            - Height: {attrs['height']['feet']}'{attrs['height']['inches']}"
+            - Weight: {attrs['weight']['lbs']} lbs
+            - Body Type: {get_body_type_description(attrs['bmi'])}
+            
+            **Style Preferences:**
+            - Preferred Fit: {', '.join(attrs['preferred_fit'])}
+            - Priority: {', '.join(attrs['clothing_comfort'])}
+            
+            **Focus Areas:**
+            - Highlight: {', '.join(attrs['highlight_areas'])}
+            - Minimize: {', '.join(attrs['minimize_areas'])}
+        """)
+    
+    # Continue with existing style quiz logic
+    # ... (existing style quiz code) ...
+
+def get_body_type_description(bmi):
+    """Get a general body type description based on BMI"""
+    if bmi < 18.5:
+        return "Slim"
+    elif bmi < 25:
+        return "Regular"
+    elif bmi < 30:
+        return "Full"
+    else:
+        return "Bold"
 
 def analyze_style_preferences(responses):
     """Analyze quiz responses using GPT-4 to determine style aesthetic"""
@@ -3692,6 +3963,656 @@ def show_wardrobe_essentials_results(essentials):
         else:
             st.success("You have items matching all the essentials!")
 
+def analyze_colors_with_imagga(image_bytes):
+    """Analyze image colors using Imagga API"""
+    api_key = os.getenv("IMAGGA_API_KEY")
+    api_secret = os.getenv("IMAGGA_API_SECRET")
+    
+    if not api_key or not api_secret:
+        st.error("Imagga API credentials not found. Please check your .env file.")
+        return None
+    
+    try:
+        # Imagga API endpoint for color analysis
+        api_url = "https://api.imagga.com/v2/colors"
+        
+        # Prepare the image file for upload
+        files = {'image': image_bytes}
+        
+        # Make API request
+        response = requests.post(
+            api_url,
+            auth=(api_key, api_secret),
+            files=files
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Error from Imagga API: {response.text}")
+            return None
+            
+    except Exception as e:
+        st.error(f"Error accessing Imagga API: {str(e)}")
+        return None
+
+def determine_color_season(colors_data):
+    """Use GPT-4 to determine color season based on Imagga color analysis"""
+    try:
+        if not colors_data or 'result' not in colors_data:
+            return None
+            
+        # Extract dominant colors and their properties
+        colors = colors_data['result']['colors']
+        
+        # Format color data for GPT-4
+        color_info = {
+            'background_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                                for c in colors.get('background_colors', [])],
+            'foreground_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                                for c in colors.get('foreground_colors', [])],
+            'image_colors': [{'hex': c['html_code'], 'percent': c['percent']} 
+                            for c in colors.get('image_colors', [])]
+        }
+        
+        prompt = f"""Based on this color analysis of a person's photo:
+        
+        Dominant colors (hex codes and percentages):
+        {json.dumps(color_info, indent=2)}
+        
+        Please determine:
+        1. Their likely color season (Spring, Summer, Autumn, or Winter)
+        2. Whether they have warm or cool undertones
+        3. A list of 5-7 colors that would be most flattering for them
+        
+        Return your response in this exact JSON format:
+        {{
+            "season": "Season name",
+            "undertone": "Warm or Cool",
+            "flattering_colors": ["color1", "color2", "etc"],
+            "explanation": "Brief explanation of the analysis"
+        }}"""
+        
+        messages = [
+            {"role": "system", "content": "You are a color analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=messages
+            )
+            try:
+                return json.loads(response.choices[0].message.content)
+            except json.JSONDecodeError as e:
+                st.error(f"Error parsing response: {str(e)}")
+                return None
+        except Exception as e:
+            st.error(f"Error calling GPT-4 API: {str(e)}")
+            return None
+            
+    except Exception as e:
+        st.error(f"Error processing color data: {str(e)}")
+        return None
+
+def face_shape_quiz():
+    """Quiz to determine user's face shape"""
+    st.markdown("### 👤 Face Shape Analysis")
+    st.markdown("""
+        Understanding your face shape helps you choose the most flattering:
+        - Hairstyles
+        - Glasses frames
+        - Necklines
+        - Accessories
+    """)
+    
+    questions = {
+        'face_length': {
+            'question': "How would you describe your face length?",
+            'options': [
+                "Longer than it is wide",
+                "About equal in length and width",
+                "Wider than it is long"
+            ]
+        },
+        'jaw_shape': {
+            'question': "Which best describes your jaw?",
+            'options': [
+                "Angular and sharp",
+                "Rounded",
+                "Square and prominent",
+                "Narrow and pointed"
+            ]
+        },
+        'cheekbones': {
+            'question': "How would you describe your cheekbones?",
+            'options': [
+                "High and prominent",
+                "Round and full",
+                "Not very prominent",
+                "Wide and angular"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"face_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Determine My Face Shape", type="primary"):
+        face_shape = analyze_face_shape(responses)
+        show_face_shape_results(face_shape)
+
+def body_type_quiz():
+    """Quiz to determine user's body type"""
+    st.markdown("### 📏 Body Type Analysis")
+    st.markdown("""
+        Understanding your body type helps you:
+        - Choose flattering silhouettes
+        - Balance your proportions
+        - Create harmonious outfits
+    """)
+    
+    questions = {
+        'shoulders': {
+            'question': "How would you describe your shoulders?",
+            'options': [
+                "Broader than my hips",
+                "Same width as my hips",
+                "Narrower than my hips",
+                "Angular and straight"
+            ]
+        },
+        'waist': {
+            'question': "How defined is your waist?",
+            'options': [
+                "Very defined/curved",
+                "Somewhat defined",
+                "Straight with little definition",
+                "Not visible/undefined"
+            ]
+        },
+        'body_lines': {
+            'question': "Which best describes your overall body lines?",
+            'options': [
+                "Curved and rounded",
+                "Straight and angular",
+                "Mixed curved and straight",
+                "Soft and undefined"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"body_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Analyze My Body Type", type="primary"):
+        body_type = analyze_body_type(responses)
+        show_body_type_results(body_type)
+
+def analyze_face_shape(responses):
+    """Analyze quiz responses to determine face shape"""
+    prompt = f"""Based on these characteristics:
+    Face length: {responses['face_length']}
+    Jaw shape: {responses['jaw_shape']}
+    Cheekbones: {responses['cheekbones']}
+    
+    Determine the person's face shape (Oval, Round, Square, Heart, Diamond, or Rectangle).
+    Return ONLY the face shape name."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a face shape analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+def show_face_shape_results(face_shape):
+    """Display face shape analysis results"""
+    st.success(f"Your Face Shape: {face_shape}")
+    st.markdown(get_face_shape_tips(face_shape))
+
+def get_face_shape_tips(face_shape):
+    """Get styling tips for a face shape"""
+    tips = {
+        "Oval": "Lucky you! Most styles work well with your balanced proportions.",
+        "Round": "Choose angular frames and accessories to add definition.",
+        "Square": "Soften angles with curved lines and oval shapes.",
+        "Heart": "Balance a wider forehead with wider bottom frames.",
+        "Diamond": "Highlight your cheekbones with upswept frames.",
+        "Rectangle": "Add width with round or square shapes."
+    }
+    return tips.get(face_shape, "No specific tips available for this face shape.")
+
+def get_season_tips(season):
+    """Get styling tips for a color season"""
+    tips = {
+        "Warm Spring": """
+            - Wear warm, clear colors
+            - Choose golden jewelry
+            - Avoid dark, cool colors
+            - Best neutrals are camel and warm brown
+        """,
+        "Cool Winter": """
+            - Wear clear, cool colors
+            - Choose silver jewelry
+            - Avoid muted, warm colors
+            - Best neutrals are navy and gray
+        """,
+        # Add other seasons as needed
+    }
+    return tips.get(season, "No specific tips available for this season.")
+
+# Fix 1: Add missing function for analyzing body type
+def analyze_body_type(responses):
+    """Analyze quiz responses to determine body type"""
+    prompt = f"""Based on these characteristics:
+    Shoulders: {responses['shoulders']}
+    Waist: {responses['waist']}
+    Body lines: {responses['body_lines']}
+    
+    Determine the person's body type (Hourglass, Rectangle, Triangle, Inverted Triangle, or Oval).
+    Return ONLY the body type name."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a body type analysis expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+# Fix 2: Add missing function for showing body type results
+def show_body_type_results(body_type):
+    """Display body type analysis results"""
+    st.success(f"Your Body Type: {body_type}")
+    
+    tips = {
+        "Hourglass": """
+            - Emphasize your natural waist
+            - Choose fitted clothing that follows your curves
+            - Belt dresses and tops to highlight your waist
+            - Avoid boxy or oversized styles
+        """,
+        "Rectangle": """
+            - Create curves with peplum tops and wrap dresses
+            - Use belts to define your waist
+            - Layer pieces to add dimension
+            - Try ruffles and gathered details
+        """,
+        "Triangle": """
+            - Draw attention upward with detailed tops
+            - Choose A-line skirts and dresses
+            - Opt for darker colors on bottom
+            - Balance with structured shoulders
+        """,
+        "Inverted Triangle": """
+            - Balance shoulders with fuller skirts
+            - Choose V-necks and scoop necklines
+            - Add volume to lower body
+            - Avoid shoulder pads and puffy sleeves
+        """,
+        "Oval": """
+            - Create vertical lines to elongate
+            - Choose flowing fabrics
+            - Wear empire waist styles
+            - Focus on structured pieces
+        """
+    }
+    
+    st.markdown("### Styling Tips")
+    st.markdown(tips.get(body_type, "No specific tips available for this body type."))
+
+# Fix 3: Add missing function for style personality quiz
+def style_personality_quiz():
+    """Quiz to determine user's style personality"""
+    st.markdown("### 👗 Style Personality Quiz")
+    st.markdown("""
+        Discover your unique style personality! This comprehensive quiz analyzes your preferences
+        across multiple dimensions to help you understand and develop your personal style.
+    """)
+    
+    questions = {
+        'weekend_style': {
+            'question': "What's your ideal weekend outfit?",
+            'options': [
+                "Comfortable athleisure (leggings, oversized sweater, sneakers)",
+                "Polished casual (well-fitted jeans, blazer, loafers)",
+                "Bold, artistic ensembles (mixed patterns, unique pieces)",
+                "Classic, timeless basics (white shirt, tailored pants)",
+                "Trendy, fashion-forward looks (latest styles, statement pieces)"
+            ]
+        },
+        'color_approach': {
+            'question': "How do you approach color in your wardrobe?",
+            'options': [
+                "Neutral palette with occasional pops of color",
+                "Bold, vibrant colors that make a statement",
+                "Soft, muted tones that blend together",
+                "Monochromatic looks in varying shades",
+                "Mix of bright and neutral depending on mood"
+            ]
+        },
+        'accessories': {
+            'question': "How do you approach accessories?",
+            'options': [
+                "Minimal and practical (simple watch, studs)",
+                "Classic and coordinated (pearls, matching sets)",
+                "Bold statement pieces (chunky jewelry, unique designs)",
+                "Vintage or artistic pieces with history",
+                "Latest trends and modern designs"
+            ]
+        },
+        'shopping': {
+            'question': "What's your shopping style?",
+            'options': [
+                "Quality basics that last years",
+                "Investment pieces from luxury brands",
+                "Unique, artistic pieces from boutiques",
+                "Mix of vintage and contemporary",
+                "Latest trends from fashion retailers"
+            ]
+        },
+        'outfit_planning': {
+            'question': "How do you approach outfit planning?",
+            'options': [
+                "Carefully coordinated the night before",
+                "Capsule wardrobe with easy mixing",
+                "Spontaneous based on mood",
+                "Following specific style rules",
+                "Inspired by current trends"
+            ]
+        },
+        'style_icons': {
+            'question': "Which style icon's aesthetic most resonates with you?",
+            'options': [
+                "Audrey Hepburn (timeless elegance)",
+                "Kate Moss (effortless cool)",
+                "Iris Apfel (bold maximalism)",
+                "Steve Jobs (minimal uniformity)",
+                "Rihanna (fearless experimentation)"
+            ]
+        },
+        'comfort_vs_style': {
+            'question': "How do you balance comfort and style?",
+            'options': [
+                "Comfort is my top priority",
+                "Equal balance of both",
+                "Style first, but must be wearable",
+                "Willing to sacrifice comfort for look",
+                "Depends on the occasion"
+            ]
+        },
+        'pattern_preference': {
+            'question': "What's your approach to patterns and prints?",
+            'options': [
+                "Minimal patterns, prefer solid colors",
+                "Classic patterns (stripes, checks)",
+                "Bold, artistic prints",
+                "Mix of patterns and textures",
+                "Trendy seasonal patterns"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"style_personality_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Discover My Style Personality", type="primary"):
+        personality = analyze_style_personality(responses)
+        show_style_personality_results(personality)
+
+def analyze_style_personality(responses):
+    """Enhanced analysis of quiz responses to determine style personality"""
+    prompt = f"""Based on these detailed style preferences:
+    Weekend style: {responses['weekend_style']}
+    Color approach: {responses['color_approach']}
+    Accessories: {responses['accessories']}
+    Shopping: {responses['shopping']}
+    Outfit planning: {responses['outfit_planning']}
+    Style icons: {responses['style_icons']}
+    Comfort vs style: {responses['comfort_vs_style']}
+    Pattern preference: {responses['pattern_preference']}
+    
+    Analyze these responses to determine the person's primary and secondary style personalities.
+    Consider these style types:
+    - Classic (timeless, polished, coordinated)
+    - Romantic (feminine, soft, detailed)
+    - Creative (artistic, unique, experimental)
+    - Minimalist (clean, simple, modern)
+    - Trendy (current, fashion-forward)
+    - Dramatic (bold, statement-making)
+    - Natural (comfortable, casual, effortless)
+    - Elegant (sophisticated, refined, luxurious)
+    
+    Return the result in this format:
+    Primary: [Style Type]
+    Secondary: [Style Type]
+    Key Characteristics: [3-4 key traits]"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are an expert fashion psychologist specializing in personal style analysis."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+def show_style_personality_results(personality_analysis):
+    """Enhanced display of style personality results"""
+    # Parse the analysis
+    lines = personality_analysis.split('\n')
+    primary = lines[0].split(': ')[1]
+    secondary = lines[1].split(': ')[1]
+    characteristics = lines[2].split(': ')[1]
+    
+    # Display results
+    st.success("Your Style Analysis Complete!")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"""
+            ### Primary Style: {primary}
+            This is your dominant style preference and should guide most of your wardrobe choices.
+        """)
+    
+    with col2:
+        st.markdown(f"""
+            ### Secondary Style: {secondary}
+            This style influence adds depth and versatility to your primary style.
+        """)
+    
+    st.markdown("### Key Characteristics")
+    st.markdown(characteristics)
+    
+    # Style recommendations based on combination
+    st.markdown("### Personalized Style Recommendations")
+    
+    recommendations = get_style_recommendations(primary, secondary)
+    
+    tabs = st.tabs(["Wardrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
+    
+    with tabs[0]:
+        st.markdown("#### Must-Have Pieces")
+        for item in recommendations['essentials']:
+            st.markdown(f"- {item}")
+    
+    with tabs[1]:
+        st.markdown("#### Your Ideal Color Palette")
+        st.markdown(recommendations['colors'])
+    
+    with tabs[2]:
+        st.markdown("#### Styling Tips")
+        for tip in recommendations['styling_tips']:
+            st.markdown(f"- {tip}")
+    
+    with tabs[3]:
+        st.markdown("#### Shopping Recommendations")
+        st.markdown(recommendations['shopping_guide'])
+    
+    # Action steps
+    st.markdown("### Next Steps")
+    st.markdown("""
+        1. Review your current wardrobe against these recommendations
+        2. Identify gaps in your wardrobe essentials
+        3. Plan your next shopping trip based on the guidelines
+        4. Experiment with combining your primary and secondary styles
+    """)
+
+def get_style_recommendations(primary, secondary):
+    """Get detailed style recommendations based on style combination"""
+    prompt = f"""Create detailed style recommendations for someone with:
+    Primary Style: {primary}
+    Secondary Style: {secondary}
+    
+    Include:
+    1. List of 10 wardrobe essentials
+    2. Ideal color palette description
+    3. 5 specific styling tips
+    4. Shopping guide with specific store recommendations
+    
+    Format as a JSON with keys: essentials, colors, styling_tips, shopping_guide"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a professional fashion stylist creating personalized recommendations."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    return json.loads(response.choices[0].message.content)
+
+def wardrobe_essentials_quiz():
+    """Quiz to determine essential pieces for user's lifestyle"""
+    st.markdown("### 👔 Wardrobe Essentials Quiz")
+    st.markdown("""
+        Let's identify the key pieces you need based on your lifestyle and preferences.
+        This will help you build a functional and versatile wardrobe.
+    """)
+    
+    questions = {
+        'lifestyle': {
+            'question': "What best describes your daily activities?",
+            'options': [
+                "Corporate office work",
+                "Creative/casual workplace",
+                "Active/on-the-go",
+                "Work from home",
+                "Mix of formal and casual"
+            ]
+        },
+        'climate': {
+            'question': "What's your primary climate?",
+            'options': [
+                "Four distinct seasons",
+                "Mostly warm/hot",
+                "Mostly cool/cold",
+                "Mild year-round",
+                "Extreme temperature changes"
+            ]
+        },
+        'priorities': {
+            'question': "What's most important in your clothing?",
+            'options': [
+                "Comfort and practicality",
+                "Professional appearance",
+                "Style and fashion",
+                "Versatility",
+                "Durability"
+            ]
+        }
+    }
+    
+    responses = {}
+    for key, data in questions.items():
+        responses[key] = st.radio(
+            data['question'],
+            data['options'],
+            key=f"essentials_{key}"
+        )
+        st.markdown("---")
+    
+    if st.button("Get My Essentials List", type="primary"):
+        essentials = analyze_wardrobe_essentials(responses)
+        show_wardrobe_essentials_results(essentials)
+
+def analyze_wardrobe_essentials(responses):
+    """Analyze quiz responses to determine wardrobe essentials"""
+    prompt = f"""Based on these factors:
+    Lifestyle: {responses['lifestyle']}
+    Climate: {responses['climate']}
+    Priorities: {responses['priorities']}
+    
+    Create a list of 10 essential wardrobe pieces that would best serve this person.
+    Return the list with each item on a new line."""
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a wardrobe planning expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content.strip().split('\n')
+
+def show_wardrobe_essentials_results(essentials):
+    """Display wardrobe essentials results"""
+    st.success("Your Wardrobe Essentials")
+    
+    st.markdown("### Must-Have Pieces")
+    for i, item in enumerate(essentials, 1):
+        st.markdown(f"{i}. {item}")
+    
+    st.markdown("### Building Your Wardrobe")
+    st.markdown("""
+        Tips for collecting your essentials:
+        - Focus on quality over quantity
+        - Choose versatile pieces that work together
+        - Consider your color palette
+        - Invest in good basics first
+        - Add statement pieces gradually
+    """)
+    
+    # Check against current wardrobe
+    user_clothing = load_user_clothing()
+    if not user_clothing.empty:
+        st.markdown("### Wardrobe Gap Analysis")
+        missing_items = []
+        for essential in essentials:
+            # Check if any similar items exist in wardrobe
+            if not any(essential.lower() in item.lower() for item in user_clothing['name']):
+                missing_items.append(essential)
+        
+        if missing_items:
+            st.markdown("#### Items to Consider Adding:")
+            for item in missing_items:
+                st.markdown(f"- {item}")
+        else:
+            st.success("You have items matching all the essentials!")
+
 def get_color_analysis(skin_hex, hair_hex, eye_hex):
     """Get color analysis from GPT-4"""
     prompt = f"""Analyze these colors for seasonal color analysis:
@@ -3997,6 +4918,34 @@ def color_picker_tool():
                         name = color['closest_palette_color_name']
                         percentage = color['percent']
                         show_color_swatch(hex_code, f"{name} ({percentage:.1f}%)")
+
+def display_profile(username):
+    """Display user profile with avatar"""
+    if 'avatar_svg' in st.session_state and 'profile_preferences' in st.session_state:
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown("### Your Avatar")
+            st.markdown(st.session_state.avatar_svg.decode(), unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("### Profile Details")
+            prefs = st.session_state.profile_preferences
+            
+            st.markdown(f"**Style Keywords:** {', '.join(prefs['style_keywords'])}")
+            st.markdown(f"**Favorite Colors:** {', '.join(prefs['favorite_colors'])}")
+            st.markdown(f"**Bio:** {prefs['bio']}")
+            
+            if prefs['social_media']['instagram'] or prefs['social_media']['pinterest']:
+                st.markdown("#### Social Media")
+                if prefs['social_media']['instagram']:
+                    st.markdown(f"📸 Instagram: {prefs['social_media']['instagram']}")
+                if prefs['social_media']['pinterest']:
+                    st.markdown(f"📌 Pinterest: {prefs['social_media']['pinterest']}")
+            
+            st.markdown("#### Style Goals")
+            for goal in prefs['style_goals']:
+                st.markdown(f"- {goal}")
 
 # Main function
 def main():
