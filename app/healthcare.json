@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "teachmemedical",
+  "private_key_id": "478c70811cbd81807ce2ddea09f619954ddc865a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCrDjA6H0HSTfsH\n2ueOXTM7HUbKdX3ycSR/+vXGI+0JFsZfPyQa4FoAH4rIqnu+q4EeKqomtyXZfn8b\nN6iWYXFpetVJLI27hgJQ2RZ62EA9n0DWWJWzqtNzLJGyerzG4Ofq7ip8OoQhrBY3\nAqCAPa0OQZv7e6+OBdpuU8Y0VHybmTv2fAEiexgotWWkRrHZxyYIKQl5mKtVTzZm\nYRsyarqBD2Yq0n8IpBE7u0bxQfmhAIxirH8CfgAhz3b5GeaIyU9cEQpzpsNTruJp\nub5grH5TxsENV0nkwds6LJFjxGmkX66RiAE0Mdw5BqNXaImHWQD4yTyosSUH0NLE\nyPYCpzAJAgMBAAECggEAC6lLdg2UdgBf8+X4sZa+poc1QMR9bMOe2o9i0E+5r0wb\nWPnxKFiReimsU0ggEzHA+ywAbo7qKHzRsIAntkd4AloKjqhYFJKAYj+dIzcj5gTk\ngthbgvn13Ae2pRAYrNw/TfT6S37NFuM9nnbHjLE9Ci2Z3df4R2U0bMoO8e6tPLQ7\nG5gxdLSeNAkeNBZffnlZOdxOZpSHD28bUHVSTeZ3Vj8YtHRYDQZrsj98mmmYTMP4\nUNJ23KNue5MWrQDbRMkkeg6YVpXDwUdJJini2WSEnZFWnYB/jCMJfDxURHjaVUYy\ncbxxGFpOY/lIRMOWXWxTl96OT279Kpx9wfrl2sBQ+wKBgQDm9wf+fL9XLFvUndrH\nEbGcYJlF6+ybe8m7Z0Wv+B6n59tAXoxOEw0wPDo//YVjm/odPvnzbdzwmSwv6wmq\nAmaiNP9cDQs8n3PPGrGS3xbvomlLMUZ5uR8so2A7guEDs2uht4+vxzKummbsZ3Zz\nXmezmQk9cBQVoXzUZ66kzv5mkwKBgQC9mL9dTxWX8RKDIzWrfqCA8VdPVusBesJf\n3xuQ777zuLPb8mTa7HOvWUygbotpaUW+idNRp86sQRZHxBH1eesn5MLVw5tJfNl2\nS3LgyFYZT9/XlO7D97pPg+jtXi7+34OFyJ/oGpaQ34h8O3ua5CeD5E+dZOg9VAgD\niCACPtn0cwKBgFSjEfrgG/4F82Dmt9VbVorHm2NUIVCY/EQAhDkH47QD8wSToTa7\nJIoYiAALF2Z5Mh6lhVL/X4eLmfW1W8VBO/sVEL7ayNNeW0H5tjjsJ6uJCKzVUc4p\nWJMzC4DDZVHF3htU+QKhLKFvU2guQenlHntiCVDKUZHbq7Lqi8U5VWChAoGAY3sJ\nNdlwGBhawUoxN/mqF94KFMwjZNRXttwm56aUB+erH8YQmzoj/Saa6Tb3mWiuOqqw\noZCuBX3lReSgE7BT7cu/W1BWY3nJ1KMD9OPJIWDir4gqu9J5BI3PIvUfLYZzyTea\nh7ujswJG6ACB+6SpAzBBgfFXVg6IYeoD+Ymm7PcCgYBERQH7Owb1R9afgKDQcT04\nJUzfTK65rFxK+iwlVmgJkZz263XbTg4WrD/jBGXYVJeR5mwJUrJrNIsea1Tnbn4j\nTaukHtdhYm7b+8amgg4RKzdYSAhhHZHGxVqNew0T8sB4kY7djnyOahpYhzJSKw79\nEODljpoSgR+rsTmpNPzL2A==\n-----END PRIVATE KEY-----\n",
+  "client_email": "gmail-998@teachmemedical.iam.gserviceaccount.com",
+  "client_id": "110606700097022404720",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gmail-998%40teachmemedical.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

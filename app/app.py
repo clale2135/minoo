@@ -33,8 +33,13 @@ api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
 USER_DB_PATH = "user_db.csv"
 
-
-
+# Initialize Streamlit configuration
+st.set_page_config(
+    page_title="Style Quiz",
+    page_icon="👕",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 def set_custom_style():
    st.markdown("""
@@ -1630,35 +1635,68 @@ def customize_avatar_and_profile():
     """Allow users to customize their avatar and profile"""
     st.title("🎨 Customize Your Profile")
     
-    with st.form("avatar_customization"):
-        # Create two columns for avatar preview and customization
-        col_preview, col_customize = st.columns([1, 2])
+    # Initialize session state for avatar preferences if not exists
+    if 'temp_avatar_preferences' not in st.session_state:
+        st.session_state.temp_avatar_preferences = {
+            "skin_tone": "light",
+            "hair": {
+                "length": "Short",
+                "color": "brown"
+            }
+        }
+    
+    # Create two columns for avatar preview and customization
+    col_preview, col_customize = st.columns([1, 2])
+    
+    # Avatar customization outside the form
+    with col_customize:
+        st.markdown("### Avatar Customization")
         
-        with col_customize:
-            st.markdown("### Avatar Customization")
-            
-            # Avatar Base
-            col1, col2 = st.columns(2)
-            with col1:
-                skin_tone = st.select_slider(
-                    "Skin Tone",
-                    options=["light", "brown", "dark"],
-                    value="light"
-                )
-            with col2:
-                hair_color = st.select_slider(
-                    "Hair Color",
-                    options=["black", "brown", "blonde", "red"],
-                    value="brown"
-                )
-            
-            # Hair Style
-            hair_length = st.selectbox(
-                "Hair Style",
-                ["Short", "Medium", "Long", "Buzz Cut", "Bald"]
+        # Avatar Base
+        col1, col2 = st.columns(2)
+        with col1:
+            skin_tone = st.select_slider(
+                "Skin Tone",
+                options=["light", "brown", "dark"],
+                value=st.session_state.temp_avatar_preferences["skin_tone"],
+                key="skin_tone_slider"
+            )
+        with col2:
+            hair_color = st.select_slider(
+                "Hair Color",
+                options=["black", "brown", "blonde", "red"],
+                value=st.session_state.temp_avatar_preferences["hair"]["color"],
+                key="hair_color_slider"
             )
         
-        # Rest of the profile customization remains the same
+        # Hair Style
+        hair_length = st.selectbox(
+            "Hair Style",
+            ["Short", "Medium", "Long", "Buzz Cut", "Bald"],
+            index=["Short", "Medium", "Long", "Buzz Cut", "Bald"].index(
+                st.session_state.temp_avatar_preferences["hair"]["length"]
+            ),
+            key="hair_length_select"
+        )
+    
+    # Update temp preferences
+    st.session_state.temp_avatar_preferences = {
+        "skin_tone": skin_tone,
+        "hair": {
+            "length": hair_length,
+            "color": hair_color
+        }
+    }
+    
+    # Preview avatar in the left column
+    with col_preview:
+        st.markdown("### Avatar Preview")
+        avatar_svg, avatar_url = generate_dicebear_avatar(st.session_state.temp_avatar_preferences)
+        if avatar_svg:
+            st.markdown(avatar_svg.decode(), unsafe_allow_html=True)
+    
+    # Profile form
+    with st.form("profile_form"):
         st.markdown("### Profile Details")
         
         # Style Preferences
@@ -1708,30 +1746,12 @@ def customize_avatar_and_profile():
         # Submit button
         submit = st.form_submit_button("Save Profile & Continue to Style Quiz")
         
-        # Preview avatar in the left column
-        with col_preview:
-            st.markdown("### Avatar Preview")
-            
-            # Create temporary avatar preferences for preview
-            temp_preferences = {
-                "skin_tone": skin_tone,
-                "hair": {
-                    "length": hair_length,
-                    "color": hair_color
-                }
-            }
-            
-            # Generate and display avatar preview
-            avatar_svg, avatar_url = generate_dicebear_avatar(temp_preferences)
-            if avatar_svg:
-                st.markdown(avatar_svg.decode(), unsafe_allow_html=True)
-        
         if submit:
-            # Save avatar and profile preferences to session state
-            st.session_state.avatar_preferences = temp_preferences
+            # Save final avatar and profile preferences to session state
+            st.session_state.avatar_preferences = st.session_state.temp_avatar_preferences
             
             # Generate and save final avatar
-            final_avatar_svg, final_avatar_url = generate_dicebear_avatar(temp_preferences)
+            final_avatar_svg, final_avatar_url = generate_dicebear_avatar(st.session_state.avatar_preferences)
             if final_avatar_svg:
                 st.session_state.avatar_svg = final_avatar_svg
                 st.session_state.avatar_url = final_avatar_url
@@ -5471,4 +5491,13 @@ def display_shopping_recommendations(recommendations, section_id=""):
 
 
 if __name__ == "__main__":
-   main()
+    try:
+        # Initialize session state if needed
+        if 'page' not in st.session_state:
+            st.session_state.page = 'home'
+        
+        # Call your main function or start page
+        main()  # or whatever your main function is called
+        
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")

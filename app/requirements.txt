@@ -7,6 +7,8 @@ cachetools==5.4.0
 certifi==2024.7.4
 charset-normalizer==3.3.2
 click==8.1.7
+opencv-python-headless==4.8.1.78
+
 distro==1.9.0
 gitdb==4.0.11
 GitPython==3.1.43
@@ -22,11 +24,14 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 mdurl==0.1.2
 narwhals==1.4.2
-numpy==2.0.1
+#numpy==2.0.1
+numpy==1.23.5
+
 openai==1.41.0
 packaging==24.1
 pandas==2.2.2
-pillow==10.4.0
+#pillow==10.4.0
+pillow>=9.0.0
 protobuf==5.27.3
 pyarrow==17.0.0
 pydantic==2.8.2
@@ -55,3 +60,4 @@ pydantic==2.8.2
 requests>=2.31.0
 Pillow>=10.4.0  # Using the newer version since it's already installed
 pyperclip>=1.8.2
+streamlit-drawable-canvas==0.9.3
