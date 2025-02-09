@@ -25,18 +25,14 @@ except ImportError:
             st.code(text, language=None)
     pyperclip = PyperclipFallback()
 
-## clare's comments
-#minoo
-
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
 USER_DB_PATH = "user_db.csv"
 
-# Initialize Streamlit configuration
+# Must be the first Streamlit command
 st.set_page_config(
-    page_title="Style Quiz",
-    page_icon="👕",
+    page_title="Wardrobe App",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -1552,7 +1548,7 @@ def clothing_data_insights():
                                     # Give user time to see the success message
                                     time.sleep(2)
                                     # Force a page refresh
-                                    st.experimental_rerun()
+                                    st.rerun()
                         except Exception as e:
                             st.error(f"Error saving outfit: {str(e)}")
                             st.write("Debug: Save button error:", str(e))
@@ -2276,7 +2272,7 @@ def personal_attributes_quiz():
             # Show success message and rerun to start style quiz
             st.success("Personal attributes saved! Proceeding to style quiz...")
             time.sleep(1)
-            st.rerun()  # Updated from experimental_rerun()
+            st.rerun()  # Changed from experimental_rerun
 
 def run_style_quiz():
     """Run the main style quiz with personal attributes context"""
@@ -4959,537 +4955,504 @@ def display_profile(username):
             for goal in prefs['style_goals']:
                 st.markdown(f"- {goal}")
 
-# Main function
-def main():
-   set_custom_style()
-  
-   if "logged_in" not in st.session_state:
-       st.session_state.logged_in = False
-   if "username" not in st.session_state:
-       st.session_state.username = None
-   if "show_style_quiz" not in st.session_state:
-       st.session_state.show_style_quiz = False
-
-
-   st.markdown("""
-       <h1 style='text-align: center; color: #2c3e50; padding: 2rem 0;'>
-           👔 Your Digital Wardrobe
-       </h1>
-   """, unsafe_allow_html=True)
-
-
-   if st.session_state.logged_in and st.session_state.username:
-       if st.session_state.show_style_quiz:
-           style_quiz()
-       elif st.session_state.get('show_tutorial', False):
-           show_tutorial()
-       else:
-           # Regular app flow
-           migrate_images()
-           
-           # Get page from URL parameters
-           current_page = st.query_params.get('page', 'Home')
-           
-           # Update sidebar to match URL
-           page = st.sidebar.selectbox(
-               "Choose a page",
-               ["Home", "Image Uploader and Display", "Saved Clothes", 
-                "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                "Shopping Recommendations"],  # Added new page
-               index=["Home", "Image Uploader and Display", "Saved Clothes", 
-                      "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                      "Saved Outfits", "Outfit Calendar", "Style Quizzes",
-                      "Shopping Recommendations"].index(current_page)
-           )
-           
-           # Show the selected page
-           if page == "Home":
-               homepage()
-           elif page == "Image Uploader and Display":
-               image_uploader_and_display()
-           elif page == "Saved Clothes":
-               display_saved_clothes()
-           elif page == "Clothing Data Insights with GPT-4":
-               clothing_data_insights()
-           elif page == "Weather-Based Outfits":
-               weather_based_outfits()
-           elif page == "Saved Outfits":
-               display_saved_outfits()
-           elif page == "Outfit Calendar":
-               schedule_outfits()
-           elif page == "Style Quizzes":
-               style_quizzes()
-           elif page == "Shopping Recommendations":
-               shopping_recommendations()
-   else:
-       st.markdown("""
-           <div class='welcome-msg'>
-               Welcome to Your Digital Wardrobe!
-               <br>Please login or create an account to get started.
-           </div>
-       """, unsafe_allow_html=True)
-       
-       auth_page = st.sidebar.selectbox("Authentication", ["Login", "Create Account"])
-       if auth_page == "Login":
-           login()
-       elif auth_page == "Create Account":
-           create_account()
-
-# Add these new functions
 def shopping_recommendations():
     """Generate personalized shopping recommendations"""
-    st.title("🛍️ Personalized Shopping Recommendations")
-    
-    # Create tabs for different recommendation types
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "👕 Similar to My Clothes",
-        "❓ Based on Questions",
-        "👗 Complete an Outfit",
-        "💝 My Wishlist"  # New tab
-    ])
-    
-    with tab1:
-        similar_clothes_recommendations()
-    
-    with tab2:
-        question_based_recommendations()
-    
-    with tab3:
-        complete_outfit_recommendations()
-        
-    with tab4:
-        view_wishlist()
-
-def view_wishlist():
-    """View and manage wishlist items"""
-    st.markdown("### My Wishlist")
-    
-    # Verify user is logged in
-    if "username" not in st.session_state:
-        st.error("Please log in to view your wishlist.")
-        return
-        
-    wishlist_file = f"{st.session_state.username}_wishlist.json"
-    
-    # Check if wishlist file exists
-    if not os.path.exists(wishlist_file):
-        st.info("Your wishlist is empty. Start saving items you like!")
-        return
-        
-    try:
-        # Read wishlist file
-        with open(wishlist_file, 'r') as f:
-            wishlist = json.load(f)
-            
-        if not wishlist:
-            st.info("Your wishlist is empty. Start saving items you like!")
-            return
-            
-        # Add sort options
-        sort_by = st.selectbox(
-            "Sort by:",
-            ["Date Added (Newest)", "Date Added (Oldest)", "Price (Low to High)", "Price (High to Low)"]
-        )
-        
-        # Sort wishlist items
-        try:
-            if sort_by == "Date Added (Newest)":
-                wishlist = sorted(wishlist, key=lambda x: x['date_added'], reverse=True)
-            elif sort_by == "Date Added (Oldest)":
-                wishlist = sorted(wishlist, key=lambda x: x['date_added'])
-            elif sort_by == "Price (Low to High)":
-                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')))
-            elif sort_by == "Price (High to Low)":
-                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')), reverse=True)
-        except (KeyError, ValueError) as e:
-            st.warning("Some items may have invalid price data. Sorting might not be accurate.")
-        
-        # Display items in grid
-        for i in range(0, len(wishlist), 3):
-            cols = st.columns(3)
-            for j, col in enumerate(cols):
-                if i + j < len(wishlist):
-                    item_data = wishlist[i + j]
-                    item = item_data['item']
-                    with col:
-                        # Display product image
-                        if 'thumbnail' in item:
-                            st.image(item['thumbnail'], use_column_width=True)
-                        
-                        # Display product details
-                        st.markdown(f"""
-                            **{item.get('title', 'No title')[:50]}...**  
-                            💰 {item.get('price', 'Price not available')}  
-                            {f"⭐ {item.get('rating')} ({item.get('reviews', '0')})" if 'rating' in item else ''}  
-                            📅 Added: {item_data['date_added']}
-                        """)
-                        
-                        # Add link to product
-                        if 'link' in item:
-                            st.markdown(f"[Shop Now]({item['link']})")
-                        
-                        # Remove from wishlist button
-                        if st.button("🗑️ Remove", key=f"remove_{i}_{j}"):
-                            wishlist.pop(i + j)
-                            with open(wishlist_file, 'w') as f:
-                                json.dump(wishlist, f, indent=2)
-                            st.experimental_rerun()
-        
-        # Add export option
-        if st.button("📥 Export Wishlist"):
-            export_wishlist(wishlist)
-            
-    except json.JSONDecodeError:
-        st.error("Error reading wishlist file. The file may be corrupted.")
-    except Exception as e:
-        st.error(f"An error occurred while loading your wishlist: {str(e)}")
-
-def export_wishlist(wishlist):
-    """Export wishlist to CSV"""
-    try:
-        # Create DataFrame from wishlist
-        data = []
-        for item_data in wishlist:
-            item = item_data['item']
-            data.append({
-                'Title': item.get('title', 'No title'),
-                'Price': item.get('price', 'N/A'),
-                'Rating': item.get('rating', 'N/A'),
-                'Reviews': item.get('reviews', 'N/A'),
-                'Link': item.get('link', 'N/A'),
-                'Date Added': item_data['date_added']
-            })
-        
-        df = pd.DataFrame(data)
-        
-        # Convert DataFrame to CSV
-        csv = df.to_csv(index=False)
-        
-        # Create download button
-        st.download_button(
-            label="Download CSV",
-            data=csv,
-            file_name="wishlist.csv",
-            mime="text/csv"
-        )
-    except Exception as e:
-        st.error(f"Error exporting wishlist: {str(e)}")
-
-def save_to_wishlist(item):
-    """Save an item to the user's wishlist"""
-    if 'username' not in st.session_state:
-        st.error("Please log in to save items to your wishlist.")
-        return
-
-    wishlist_file = f"{st.session_state.username}_wishlist.json"
-    wishlist = []
-
-    try:
-        # Load existing wishlist if it exists
-        if os.path.exists(wishlist_file):
-            with open(wishlist_file, 'r') as f:
-                wishlist = json.load(f)
-
-        # Add new item with timestamp
-        wishlist.append({
-            'item': item,
-            'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-
-        # Save updated wishlist
-        with open(wishlist_file, 'w') as f:
-            json.dump(wishlist, f, indent=2)
-            
-        st.success("Item added to wishlist!")
-        
-    except Exception as e:
-        st.error(f"Error saving to wishlist: {str(e)}")
-
-def similar_clothes_recommendations():
-    """Find clothes similar to user's existing wardrobe"""
-    st.markdown("### Find Similar Clothes")
+    st.title("🛍️ Shopping Recommendations")
     
     # Load user's wardrobe
     user_clothing = load_user_clothing()
-    if user_clothing.empty:
-        st.info("Add some clothes to your wardrobe first to get recommendations!")
-        return
-    
-    # Let user select which item to find similar clothes for
-    selected_item = st.selectbox(
-        "Select an item from your wardrobe to find similar pieces:",
-        options=user_clothing['name'].tolist()
-    )
-    
-    if selected_item:
-        item_details = user_clothing[user_clothing['name'] == selected_item].iloc[0]
-        
-        # Show selected item details
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            if os.path.exists(item_details['image_path']):
-                st.image(item_details['image_path'], caption="Selected Item")
-        
-        with col2:
-            st.markdown(f"""
-                **Type:** {item_details['type_of_clothing']}  
-                **Color:** {item_details['color']}  
-                **Season:** {item_details['season']}
-            """)
-        
-        # Get similar items using SERP API
-        search_query = f"{item_details['color']} {item_details['type_of_clothing']} similar to {selected_item}"
-        recommendations = get_shopping_recommendations(search_query, "")
-        
-        if recommendations:
-            st.markdown("### Similar Items You Might Like")
-            display_shopping_recommendations(recommendations, "similar")
-
-def question_based_recommendations():
-    """Get recommendations based on user's answers to questions"""
-    st.markdown("### Find Clothes Based on Your Preferences")
-    
-    # Questions to help narrow down recommendations
-    occasion = st.text_input(
-        "What occasion are you shopping for?",
-        placeholder="e.g., Casual, Work, Special Event, Workout, Vacation"
-    )
-    
-    budget = st.text_input(
-        "What's your budget range?",
-        placeholder="e.g., Budget, Mid-range, High-end, Luxury"
-    )
-    
-    style_preference = st.text_input(
-        "What styles do you prefer?",
-        placeholder="e.g., Classic, Trendy, Bohemian, Minimalist, Streetwear, Elegant"
-    )
-    
-    color_preference = st.color_picker("Choose a color you're looking for:", "#000000")
-    
-    if st.button("Find Recommendations"):
-        if not occasion or not budget or not style_preference:
-            st.warning("Please fill in all fields to get personalized recommendations.")
-            return
-            
-        # Construct search query based on answers
-        search_query = f"{occasion} {style_preference} clothing {budget}"
-        recommendations = get_shopping_recommendations(search_query, "")
-        
-        if recommendations:
-            st.markdown("### Recommended Items")
-            display_shopping_recommendations(recommendations, "questions")
-
-def complete_outfit_recommendations():
-    """Find items to complete an outfit"""
-    st.markdown("### Complete Your Outfit")
-    
-    # Load user's saved outfits and wardrobe
-    outfits = load_saved_outfits()
-    user_clothing = load_user_clothing()
     
     if user_clothing.empty:
-        st.info("Add some clothes to your wardrobe first to get completion recommendations!")
+        st.warning("Please add some clothes to your wardrobe first to get personalized recommendations!")
+        st.markdown("[Go to Image Uploader and Display →](Image Uploader and Display)")
         return
     
-    # Option to start from saved outfit or create new
-    start_from = st.radio(
-        "How would you like to start?",
-        ["Start from a saved outfit", "Build a new outfit"]
-    )
+    # Create tabs for different recommendation types
+    tab1, tab2, tab3 = st.tabs([
+        "Based on Your Style",
+        "Fill Wardrobe Gaps",
+        "Trending Items"
+    ])
     
-    if start_from == "Start from a saved outfit":
-        if not outfits:
-            st.info("Create some outfits first to use this feature!")
-            return
-            
-        # Select saved outfit
-        outfit_names = [outfit['name'] for outfit in outfits]
-        selected_outfit = st.selectbox("Select an outfit to complete:", outfit_names)
-        
-        if selected_outfit:
-            outfit = next((o for o in outfits if o['name'] == selected_outfit), None)
-            if outfit:
-                # Display current outfit items
-                st.markdown("### Current Outfit Items")
-                cols = st.columns(len(outfit['items']))
-                for idx, item in enumerate(outfit['items']):
-                    with cols[idx]:
-                        if os.path.exists(item.get('image_path', '')):
-                            st.image(item['image_path'], caption=item.get('name', ''))
-                
-                # Suggest what's missing
-                missing_items = suggest_missing_items(outfit['items'])
-                if missing_items:
-                    st.markdown("### Suggested Items to Complete the Outfit")
-                    for idx, item in enumerate(missing_items):
-                        recommendations = get_shopping_recommendations(item, "")
-                        if recommendations:
-                            st.markdown(f"#### {item}")
-                            display_shopping_recommendations(recommendations, f"complete_{idx}")
+    with tab1:
+        style_based_recommendations(user_clothing)
     
-    else:  # Build a new outfit
-        # Let user select base items
-        st.markdown("### Select Base Items for Your Outfit")
-        selected_items = st.multiselect(
-            "Choose items from your wardrobe:",
-            options=user_clothing['name'].tolist()
-        )
-        
-        if selected_items:
-            # Display selected items
-            st.markdown("### Selected Items")
-            cols = st.columns(len(selected_items))
-            items_details = []
-            for idx, item_name in enumerate(selected_items):
-                item = user_clothing[user_clothing['name'] == item_name].iloc[0]
-                items_details.append({
-                    'name': item_name,
-                    'type_of_clothing': item.get('type_of_clothing') or item.get('type') or item.get('category'),
-                    'color': item.get('color', ''),
-                    'image_path': item.get('image_path', '')
-                })
-                with cols[idx]:
-                    if os.path.exists(item.get('image_path', '')):
-                        st.image(item['image_path'], caption=item_name)
-            
-            # Suggest completing items
-            missing_items = suggest_missing_items(items_details)
-            if missing_items:
-                st.markdown("### Suggested Items to Complete the Outfit")
-                for item in missing_items:
-                    recommendations = get_shopping_recommendations(item, "")
-                    if recommendations:
-                        st.markdown(f"#### {item}")
-                        display_shopping_recommendations(recommendations, f"complete_{idx}")
+    with tab2:
+        wardrobe_gap_recommendations(user_clothing)
+    
+    with tab3:
+        trending_recommendations()
 
-def suggest_missing_items(outfit_items):
-    """Suggest items that would complete an outfit"""
-    # Extract types of clothing in the outfit, handling different data structures
-    current_types = []
-    for item in outfit_items:
-        # Handle both dictionary and object formats
-        if isinstance(item, dict):
-            item_type = item.get('type_of_clothing') or item.get('type') or item.get('category')
-        else:
-            # If item is an object/row from DataFrame
-            item_type = getattr(item, 'type_of_clothing', None) or getattr(item, 'type', None) or getattr(item, 'category', None)
-        
-        if item_type:
-            current_types.append(item_type.lower())
+def style_based_recommendations(user_clothing):
+    """Generate recommendations based on user's style"""
+    st.header("Recommendations Based on Your Style")
     
-    # Basic outfit completion rules
-    outfit_rules = {
-        'tops': ['shirt', 'blouse', 't-shirt', 'sweater', 'top'],
-        'bottoms': ['pants', 'skirt', 'shorts', 'jeans'],
-        'shoes': ['sneakers', 'boots', 'heels', 'sandals'],
-        'accessories': ['necklace', 'earrings', 'bracelet', 'belt'],
-        'outerwear': ['jacket', 'coat', 'cardigan']
+    # Analyze user's style preferences
+    clothing_types = user_clothing['type_of_clothing'].value_counts()
+    colors = user_clothing['color'].value_counts()
+    
+    # Display style analysis
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Your Most Common Items")
+        if not clothing_types.empty:
+            st.bar_chart(clothing_types)
+    
+    with col2:
+        st.subheader("Your Color Preferences")
+        if not colors.empty:
+            st.bar_chart(colors)
+    
+    # Generate recommendations
+    st.subheader("Recommended Items")
+    
+    # Example recommendations based on user's preferences
+    recommendations = [
+        {
+            "name": "Classic White T-Shirt",
+            "type": "T-shirt",
+            "price": "$25",
+            "description": "A versatile addition to your wardrobe",
+            "link": "https://example.com/shirt"
+        },
+        {
+            "name": "Dark Blue Jeans",
+            "type": "Jeans",
+            "price": "$60",
+            "description": "Perfect for casual outfits",
+            "link": "https://example.com/jeans"
+        },
+        # Add more recommendations as needed
+    ]
+    
+    # Display recommendations in a grid
+    cols = st.columns(3)
+    for idx, item in enumerate(recommendations):
+        with cols[idx % 3]:
+            st.markdown(f"### {item['name']}")
+            st.markdown(f"**Type:** {item['type']}")
+            st.markdown(f"**Price:** {item['price']}")
+            st.markdown(f"**Description:** {item['description']}")
+            st.markdown(f"[Shop Now]({item['link']})")
+
+def wardrobe_gap_recommendations(user_clothing):
+    """Identify and recommend items to fill wardrobe gaps"""
+    st.header("Fill Your Wardrobe Gaps")
+    
+    # Define essential wardrobe items
+    essential_items = {
+        "Tops": ["T-shirt", "Blouse", "Sweater"],
+        "Bottoms": ["Jeans", "Pants", "Skirt"],
+        "Outerwear": ["Jacket", "Coat"],
+        "Dresses": ["Dress"],
+        "Shoes": ["Shoes"]
     }
     
-    # Check what's missing
-    missing_items = []
+    # Check what user has
+    user_items = set(user_clothing['type_of_clothing'].unique())
     
-    # Check for main components
-    if not any(type in current_types for type in outfit_rules['tops']):
-        missing_items.append("Top")
-    if not any(type in current_types for type in outfit_rules['bottoms']):
-        missing_items.append("Bottom")
-    if not any(type in current_types for type in outfit_rules['shoes']):
-        missing_items.append("Shoes")
+    # Find gaps
+    gaps = {}
+    for category, items in essential_items.items():
+        missing_items = [item for item in items if item not in user_items]
+        if missing_items:
+            gaps[category] = missing_items
     
-    # Suggest accessories if none present
-    if not any(type in current_types for type in outfit_rules['accessories']):
-        missing_items.append("Accessories")
-    
-    # Suggest outerwear based on season
-    if not any(type in current_types for type in outfit_rules['outerwear']):
-        missing_items.append("Outerwear")
-    
-    return missing_items
-
-def get_shopping_recommendations(search_query, style_context=""):
-    """Get shopping recommendations using SERP API"""
-    try:
-        # Get API key from Streamlit secrets
-        api_key = st.secrets["SERPAPI_KEY"]
-        
-        # Set up the parameters for the API call
-        params = {
-            "api_key": api_key,
-            "engine": "google_shopping",
-            "q": search_query,
-            "num": 6,
-            "price_low": 0,
-            "price_high": 1000,
-            "gl": "us"
-        }
-
-        # Make the API request
-        response = requests.get("https://serpapi.com/search", params=params)
-        data = response.json()
-
-        if "shopping_results" in data:
-            results = data["shopping_results"]
-            return results
-        else:
-            st.warning("No shopping results found.")
-            return None
+    # Display gaps and recommendations
+    if gaps:
+        st.markdown("### Missing Essential Items")
+        for category, missing in gaps.items():
+            st.markdown(f"**{category}:** {', '.join(missing)}")
             
-    except KeyError:
-        st.error("SERP API key not found. Please check your secrets.toml file.")
-        return None
-    except Exception as e:
-        st.error(f"Error fetching shopping recommendations: {str(e)}")
-        return None
+            # Example recommendations for missing items
+            st.markdown("#### Recommended Items")
+            cols = st.columns(len(missing))
+            for idx, item in enumerate(missing):
+                with cols[idx]:
+                    st.markdown(f"##### {item}")
+                    st.markdown("Price: $XX")
+                    st.markdown("[Shop Now](https://example.com)")
+    else:
+        st.success("Great! Your wardrobe contains all essential items!")
 
-def display_shopping_recommendations(recommendations, section_id=""):
-    """Display shopping recommendations in a grid layout"""
-    if not recommendations:
-        return
-
-    # Create rows of 3 items each
-    for i in range(0, len(recommendations), 3):
+def trending_recommendations():
+    """Show trending fashion items"""
+    st.header("Trending Fashion Items")
+    
+    # Example trending categories
+    trending_categories = [
+        "Sustainable Fashion",
+        "Vintage Inspired",
+        "Minimalist Basics",
+        "Statement Pieces"
+    ]
+    
+    # Display trending categories
+    selected_category = st.selectbox(
+        "Choose a trending category",
+        trending_categories
+    )
+    
+    # Example trending items
+    trending_items = {
+        "Sustainable Fashion": [
+            {"name": "Organic Cotton Tee", "price": "$30"},
+            {"name": "Recycled Denim Jeans", "price": "$80"},
+            {"name": "Eco-friendly Sneakers", "price": "$70"}
+        ],
+        "Vintage Inspired": [
+            {"name": "Retro Print Dress", "price": "$65"},
+            {"name": "High-Waisted Pants", "price": "$55"},
+            {"name": "Vintage Style Blouse", "price": "$45"}
+        ],
+        "Minimalist Basics": [
+            {"name": "Classic White Shirt", "price": "$40"},
+            {"name": "Black Slim Pants", "price": "$50"},
+            {"name": "Basic Blazer", "price": "$90"}
+        ],
+        "Statement Pieces": [
+            {"name": "Printed Kimono", "price": "$75"},
+            {"name": "Bold Pattern Skirt", "price": "$60"},
+            {"name": "Colorful Jacket", "price": "$85"}
+        ]
+    }
+    
+    # Display trending items for selected category
+    if selected_category in trending_items:
         cols = st.columns(3)
-        for j, col in enumerate(cols):
-            if i + j < len(recommendations):
-                item = recommendations[i + j]
-                with col:
-                    # Get the correct product link
-                    product_link = item.get('product_link', '')  # Direct Google Shopping link
-                    
-                    # Display product image
-                    if 'thumbnail' in item:
-                        st.image(item['thumbnail'], use_column_width=True)
-                    
-                    # Display link immediately under the image
-                    if product_link:
-                        st.markdown(f'<a href="{product_link}" target="_blank" style="display: block; text-align: center; margin: 5px 0;">🛍️ Shop Now</a>', unsafe_allow_html=True)
-                    
-                    # Display other product details
-                    title = item.get('title', 'No title')[:50]
-                    price = item.get('price', 'Price not available')
-                    source = item.get('source', '')
-                    
-                    st.markdown(f"""
-                        **{title}...**  
-                        💰 {price}  
-                        🏪 {source}
-                    """)
+        for idx, item in enumerate(trending_items[selected_category]):
+            with cols[idx]:
+                st.markdown(f"### {item['name']}")
+                st.markdown(f"**Price:** {item['price']}")
+                st.markdown("[Shop Now](https://example.com)")
 
-
-
-
-
-if __name__ == "__main__":
-    try:
-        # Initialize session state if needed
-        if 'page' not in st.session_state:
-            st.session_state.page = 'home'
+def trading_marketplace():
+    """Marketplace for users to trade or share clothing items"""
+    st.title("👕 Trading Marketplace")
+    
+    # Check if user is logged in
+    if "username" not in st.session_state:
+        st.warning("Please log in to access the Trading Marketplace")
+        return
         
-        # Call your main function or start page
-        main()  # or whatever your main function is called
+    # Create tabs for different marketplace functions
+    tab1, tab2, tab3 = st.tabs(["Browse Items", "List Item", "My Listings"])
+    
+    with tab1:
+        st.markdown("### Available Items")
+        # Load all available items from marketplace
+        marketplace_items = load_marketplace_items()
+        
+        if marketplace_items.empty:
+            st.info("No items currently listed in the marketplace")
+        else:
+            # Display items in grid layout
+            items_per_row = 3
+            for i in range(0, len(marketplace_items), items_per_row):
+                cols = st.columns(items_per_row)
+                for j, col in enumerate(cols):
+                    if i + j < len(marketplace_items):
+                        item = marketplace_items.iloc[i + j]
+                        with col:
+                            if os.path.exists(item['image_path']):
+                                st.image(item['image_path'], caption=item['name'])
+                                st.write(f"**{item['name']}**")
+                                st.write(f"Listed by: {item['owner']}")
+                                st.write(f"Status: {item['status']}")
+                                
+                                if item['owner'] != st.session_state.username:
+                                    if st.button("Request Trade", key=f"trade_{item['id']}"):
+                                        initiate_trade_request(item['id'])
+                                        st.success("Trade request sent!")
+    
+    with tab2:
+        st.markdown("### List an Item for Trade")
+        # Load user's clothing items
+        user_clothing = load_user_clothing()
+        
+        if user_clothing.empty:
+            st.info("Add items to your wardrobe first!")
+        else:
+            # Form for listing item
+            with st.form("list_item_form"):
+                selected_item = st.selectbox(
+                    "Select item to list",
+                    user_clothing['name'].tolist()
+                )
+                
+                trade_preferences = st.multiselect(
+                    "What would you like in return?",
+                    ["Shirts", "Pants", "Dresses", "Shoes", "Accessories"],
+                    max_selections=3
+                )
+                
+                description = st.text_area(
+                    "Additional notes",
+                    placeholder="Add any details about condition, size, etc."
+                )
+                
+                if st.form_submit_button("List Item"):
+                    if list_item_for_trade(selected_item, trade_preferences, description):
+                        st.success("Item listed successfully!")
+                        st.rerun()
+    
+    with tab3:
+        st.markdown("### My Listed Items")
+        # Load user's listed items
+        my_listings = load_user_listings()
+        
+        if my_listings.empty:
+            st.info("You haven't listed any items yet")
+        else:
+            for _, item in my_listings.iterrows():
+                with st.expander(item['name']):
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        if os.path.exists(item['image_path']):
+                            st.image(item['image_path'])
+                    with col2:
+                        st.write(f"**Status:** {item['status']}")
+                        st.write(f"**Listed on:** {item['list_date']}")
+                        st.write(f"**Trade preferences:** {', '.join(item['trade_preferences'])}")
+                        
+                        if st.button("Remove Listing", key=f"remove_{item['id']}"):
+                            remove_listing(item['id'])
+                            st.success("Listing removed")
+                            st.rerun()
+
+def load_marketplace_items():
+    """Load all available items in the marketplace"""
+    marketplace_file = "marketplace.csv"
+    if os.path.exists(marketplace_file):
+        return pd.read_csv(marketplace_file)
+    return pd.DataFrame(columns=['id', 'name', 'owner', 'image_path', 'status', 'trade_preferences', 'list_date'])
+
+def list_item_for_trade(item_name, trade_preferences, description):
+    """Add an item to the marketplace"""
+    try:
+        marketplace_items = load_marketplace_items()
+        user_clothing = load_user_clothing()
+        
+        item = user_clothing[user_clothing['name'] == item_name].iloc[0]
+        
+        new_listing = pd.DataFrame([{
+            'id': str(uuid.uuid4()),
+            'name': item_name,
+            'owner': st.session_state.username,
+            'image_path': item['image_path'],
+            'status': 'Available',
+            'trade_preferences': json.dumps(trade_preferences),
+            'description': description,
+            'list_date': datetime.now().strftime("%Y-%m-%d")
+        }])
+        
+        marketplace_items = pd.concat([marketplace_items, new_listing], ignore_index=True)
+        marketplace_items.to_csv("marketplace.csv", index=False)
+        return True
         
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.error(f"Error listing item: {str(e)}")
+        return False
+
+def load_user_listings():
+    """Load listings for the current user"""
+    marketplace_items = load_marketplace_items()
+    return marketplace_items[marketplace_items['owner'] == st.session_state.username]
+
+def remove_listing(listing_id):
+    """Remove an item from the marketplace"""
+    marketplace_items = load_marketplace_items()
+    marketplace_items = marketplace_items[marketplace_items['id'] != listing_id]
+    marketplace_items.to_csv("marketplace.csv", index=False)
+
+def initiate_trade_request(listing_id):
+    """
+    Initiate a trade request for a marketplace item
+    
+    Args:
+        listing_id (str): ID of the marketplace listing being requested
+    """
+    try:
+        # Load necessary data
+        marketplace_items = load_marketplace_items()
+        user_clothing = load_user_clothing()
+        
+        # Get the listing details
+        listing = marketplace_items[marketplace_items['id'] == listing_id].iloc[0]
+        
+        # Create trade request file path
+        trade_requests_file = "trade_requests.csv"
+        
+        # Load existing trade requests or create new DataFrame
+        if os.path.exists(trade_requests_file):
+            trade_requests = pd.read_csv(trade_requests_file)
+        else:
+            trade_requests = pd.DataFrame(columns=[
+                'request_id', 'listing_id', 'requester', 'owner',
+                'status', 'request_date', 'offered_items', 'notes'
+            ])
+        
+        # Check if user already has a pending request for this item
+        existing_request = trade_requests[
+            (trade_requests['listing_id'] == listing_id) & 
+            (trade_requests['requester'] == st.session_state.username) &
+            (trade_requests['status'] == 'Pending')
+        ]
+        
+        if not existing_request.empty:
+            st.warning("You already have a pending request for this item!")
+            return False
+        
+        # Create form for trade request
+        st.markdown("### Trade Request")
+        with st.form("trade_request_form"):
+            # Let user select items to offer
+            available_items = user_clothing['name'].tolist()
+            offered_items = st.multiselect(
+                "Select items to offer in trade",
+                available_items,
+                max_selections=3
+            )
+            
+            # Add notes for the trade
+            notes = st.text_area(
+                "Add a message to the owner",
+                placeholder="Explain why you're interested in trading, ask questions, etc."
+            )
+            
+            # Submit button
+            submitted = st.form_submit_button("Send Trade Request")
+            
+            if submitted:
+                if not offered_items:
+                    st.error("Please select at least one item to offer!")
+                    return False
+                
+                # Create new trade request
+                new_request = pd.DataFrame([{
+                    'request_id': str(uuid.uuid4()),
+                    'listing_id': listing_id,
+                    'requester': st.session_state.username,
+                    'owner': listing['owner'],
+                    'status': 'Pending',
+                    'request_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'offered_items': json.dumps(offered_items),
+                    'notes': notes
+                }])
+                
+                # Add to trade requests
+                trade_requests = pd.concat([trade_requests, new_request], ignore_index=True)
+                trade_requests.to_csv(trade_requests_file, index=False)
+                
+                # Update listing status
+                marketplace_items.loc[marketplace_items['id'] == listing_id, 'status'] = 'Pending Trade'
+                marketplace_items.to_csv("marketplace.csv", index=False)
+                
+                # Send notification to owner (placeholder for future implementation)
+                notify_owner_of_trade_request(listing['owner'], listing_id)
+                
+                return True
+        
+    except Exception as e:
+        st.error(f"Error initiating trade request: {str(e)}")
+        return False
+
+def notify_owner_of_trade_request(owner_username, listing_id):
+    """
+    Notify the owner of a new trade request (placeholder implementation)
+    
+    Args:
+        owner_username (str): Username of the item owner
+        listing_id (str): ID of the listing
+    """
+    # Create notifications file path
+    notifications_file = f"{owner_username}_notifications.json"
+    
+    try:
+        # Load existing notifications or create new list
+        if os.path.exists(notifications_file):
+            with open(notifications_file, 'r') as f:
+                notifications = json.load(f)
+        else:
+            notifications = []
+        
+        # Add new notification
+        notifications.append({
+            'type': 'trade_request',
+            'listing_id': listing_id,
+            'requester': st.session_state.username,
+            'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'read': False
+        })
+        
+        # Save notifications
+        with open(notifications_file, 'w') as f:
+            json.dump(notifications, f, indent=2)
+            
+    except Exception as e:
+        st.warning(f"Could not send notification: {str(e)}")
+
+# Main function
+def main():
+    """Main function to run the Streamlit app"""
+    # Initialize session state for style quiz if not exists
+    if 'show_style_quiz' not in st.session_state:
+        st.session_state.show_style_quiz = False
+        
+    if 'quiz_completed' not in st.session_state:
+        st.session_state.quiz_completed = False
+    
+    # Initialize session state
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    if "username" not in st.session_state:
+        st.session_state.username = None
+
+    # Sidebar navigation
+    page = st.sidebar.selectbox(
+        "Choose a page",
+        ["Home", "Login/Register", "Image Uploader and Display", "Saved Clothes", 
+         "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
+         "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+         "Shopping Recommendations", "Trading Marketplace"]
+    )
+    
+    # Display the selected page
+    if page == "Home":
+        homepage()
+    elif page == "Login/Register":
+        if not st.session_state.logged_in:
+            tab1, tab2 = st.tabs(["Login", "Create Account"])
+            with tab1:
+                login()
+            with tab2:
+                create_account()
+        else:
+            st.title(f"Welcome back, {st.session_state.username}!")
+    elif page == "Image Uploader and Display":
+        image_uploader_and_display()
+    elif page == "Saved Clothes":
+        display_saved_clothes()
+    elif page == "Clothing Data Insights with GPT-4":
+        clothing_data_insights()
+    elif page == "Weather-Based Outfits":
+        weather_based_outfits()
+    elif page == "Saved Outfits":
+        display_saved_outfits()
+    elif page == "Outfit Calendar":
+        schedule_outfits()
+    elif page == "Style Quizzes":
+        style_quizzes()
+    elif page == "Shopping Recommendations":
+        shopping_recommendations()
+    elif page == "Trading Marketplace":
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access the Trading Marketplace.")
+            login()
+        else:
+            trading_marketplace()
+
+# At the bottom of your file
+if __name__ == "__main__":
+    main()
