@@ -6021,6 +6021,138 @@ def can_delete_comment(comment):
     """Check if current user can delete a comment"""
     return comment["user_id"] == st.session_state.username
 
+def social_media_features():
+    """Handle social media sharing and integration"""
+    st.title("📱 Social Media Integration")
+    
+    # Create tabs for different social features
+    share_tab, connect_tab = st.tabs(["Share Outfits", "Connect Accounts"])
+    
+    with share_tab:
+        st.markdown("### Share Your Outfits")
+        
+        # Load user's saved outfits
+        outfit_file = f"{st.session_state.username}_outfits.json"
+        if os.path.exists(outfit_file):
+            with open(outfit_file, 'r') as f:
+                saved_outfits = json.load(f)
+            
+            if saved_outfits:
+                # Select outfit to share
+                selected_outfit = st.selectbox(
+                    "Choose an outfit to share",
+                    options=[outfit['name'] for outfit in saved_outfits],
+                    key="share_outfit_select"
+                )
+                
+                # Get selected outfit details
+                outfit = next((o for o in saved_outfits if o['name'] == selected_outfit), None)
+                
+                if outfit:
+                    # Display outfit
+                    st.markdown("#### Preview")
+                    cols = st.columns(len(outfit['items']))
+                    for idx, item in enumerate(outfit['items']):
+                        with cols[idx]:
+                            if os.path.exists(item['image_path']):
+                                image = Image.open(item['image_path'])
+                                st.image(image, caption=item['name'], width=120)
+                    
+                    # Generate sharing text
+                    share_text = f"Check out my {outfit['name']} outfit for {outfit['occasion']}! #StyleShare #Fashion"
+                    
+                    # Create sharing buttons
+                    st.markdown("#### Share on")
+                    share_cols = st.columns(3)
+                    
+                    with share_cols[0]:
+                        if st.button("📸 Instagram"):
+                            instagram_url = f"https://www.instagram.com/create/story?text={share_text}"
+                            st.markdown(f"[Open Instagram]({instagram_url})")
+                    
+                    with share_cols[1]:
+                        if st.button("🐦 Twitter"):
+                            twitter_url = f"https://twitter.com/intent/tweet?text={share_text}"
+                            st.markdown(f"[Open Twitter]({twitter_url})")
+                    
+                    with share_cols[2]:
+                        if st.button("📌 Pinterest"):
+                            pinterest_url = f"https://pinterest.com/pin/create/button/?description={share_text}"
+                            st.markdown(f"[Open Pinterest]({pinterest_url})")
+                    
+                    # Copy sharing link
+                    st.markdown("#### Share via Link")
+                    share_link = f"https://yourapp.com/outfit/{outfit['id']}"  # Replace with actual sharing URL
+                    
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.text_input("Sharing Link", share_link, disabled=True)
+                    with col2:
+                        if st.button("📋 Copy"):
+                            pyperclip.copy(share_link)
+                            st.success("Link copied!")
+            else:
+                st.info("No outfits saved yet! Create some outfits to share.")
+        else:
+            st.info("No outfits saved yet! Create some outfits to share.")
+    
+    with connect_tab:
+        st.markdown("### Connect Your Social Accounts")
+        
+        # Load existing connections
+        profile_file = f"{st.session_state.username}_profile.json"
+        social_connections = {}
+        
+        if os.path.exists(profile_file):
+            with open(profile_file, 'r') as f:
+                profile_data = json.load(f)
+                social_connections = profile_data.get('social_connections', {})
+        
+        # Social media connection form
+        with st.form("social_connect_form"):
+            instagram_handle = st.text_input(
+                "Instagram Handle",
+                value=social_connections.get('instagram', ''),
+                placeholder="@username"
+            )
+            
+            pinterest_username = st.text_input(
+                "Pinterest Username",
+                value=social_connections.get('pinterest', ''),
+                placeholder="username"
+            )
+            
+            twitter_handle = st.text_input(
+                "Twitter Handle",
+                value=social_connections.get('twitter', ''),
+                placeholder="@username"
+            )
+            
+            if st.form_submit_button("Save Connections"):
+                try:
+                    # Update social connections
+                    social_connections = {
+                        'instagram': instagram_handle,
+                        'pinterest': pinterest_username,
+                        'twitter': twitter_handle
+                    }
+                    
+                    # Save to profile
+                    if os.path.exists(profile_file):
+                        with open(profile_file, 'r') as f:
+                            profile_data = json.load(f)
+                    else:
+                        profile_data = {}
+                    
+                    profile_data['social_connections'] = social_connections
+                    
+                    with open(profile_file, 'w') as f:
+                        json.dump(profile_data, f, indent=2)
+                    
+                    st.success("Social connections updated!")
+                except Exception as e:
+                    st.error(f"Error saving social connections: {str(e)}")
+
 # Main function
 def main():
     """Main function to run the Streamlit app"""
