@@ -5393,6 +5393,634 @@ def notify_owner_of_trade_request(owner_username, listing_id):
     except Exception as e:
         st.warning(f"Could not send notification: {str(e)}")
 
+def add_social_features():
+    """Add social media features to the sidebar"""
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🌟 Social Features")
+    
+    # Navigation for social features
+    social_option = st.sidebar.selectbox(
+        "Social Navigation",
+        ["Feed", "My Profile", "Find Users", "Saved Posts"],
+        key="social_nav"
+    )
+    
+    # Display the selected social feature
+    if social_option == "Feed":
+        show_social_feed()
+    elif social_option == "My Profile":
+        show_user_profile()
+    elif social_option == "Find Users":
+        find_users()
+    elif social_option == "Saved Posts":
+        show_saved_posts()
+
+def show_social_feed():
+    """Display the social feed with posts from followed users"""
+    st.title("👗 Style Feed")
+    
+    # Create a new post
+    with st.expander("✨ Create New Post"):
+        create_new_post()
+    
+    social_data = load_social_data()
+    posts = social_data.get("posts", [])
+    follows = social_data.get("follows", {}).get(st.session_state.username, [])
+    
+    # Filter posts to show only from followed users and self
+    relevant_posts = [
+        post for post in posts 
+        if post["user_id"] in follows or post["user_id"] == st.session_state.username
+    ]
+    
+    if not relevant_posts:
+        st.info("Follow some users to see their posts here!")
+        return
+    
+    # Display posts
+    for post in relevant_posts:
+        display_post(post)
+
+def show_user_profile():
+    """Display user profile with their posts and stats"""
+    st.title(f"👤 {st.session_state.username}'s Profile")
+    
+    social_data = load_social_data()
+    user_posts = [
+        post for post in social_data.get("posts", [])
+        if post["user_id"] == st.session_state.username
+    ]
+    
+    # Display stats
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Posts", len(user_posts))
+    with col2:
+        followers = len([
+            u for u, f in social_data.get("follows", {}).items()
+            if st.session_state.username in f
+        ])
+        st.metric("Followers", followers)
+    with col3:
+        following = len(
+            social_data.get("follows", {}).get(st.session_state.username, [])
+        )
+        st.metric("Following", following)
+    
+    # Display user's posts
+    st.markdown("### My Posts")
+    for post in user_posts:
+        display_post(post)
+
+def find_users():
+    """Interface for finding and following other users"""
+    st.title("🔍 Find Users")
+    
+    # Load all users
+    df = load_user_db()
+    social_data = load_social_data()
+    following = social_data.get("follows", {}).get(st.session_state.username, [])
+    
+    # Search interface
+    search = st.text_input("Search users...")
+    
+    for _, user in df.iterrows():
+        username = user["username"]
+        if username != st.session_state.username and (
+            not search or search.lower() in username.lower()
+        ):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"👤 {username}")
+            with col2:
+                if username in following:
+                    if st.button("Unfollow", key=f"unfollow_{username}"):
+                        toggle_follow(username)
+                        st.rerun()
+                else:
+                    if st.button("Follow", key=f"follow_{username}"):
+                        toggle_follow(username)
+                        st.rerun()
+
+def show_saved_posts():
+    """Display saved posts"""
+    st.title("📚 Saved Posts")
+    
+    social_data = load_social_data()
+    saved_posts = social_data.get("saved_posts", {}).get(st.session_state.username, [])
+    
+    if not saved_posts:
+        st.info("You haven't saved any posts yet!")
+        return
+    
+    # Display saved posts
+    for post_id in saved_posts:
+        post = next(
+            (p for p in social_data.get("posts", []) if p["id"] == post_id),
+            None
+        )
+        if post:
+            display_post(post)
+
+def create_new_post():
+    """Interface for creating a new post"""
+    with st.form("new_post_form"):
+        content = st.text_area("Share your style thoughts...", max_chars=500)
+        
+        # Option to attach outfit
+        user_outfits = load_user_outfits()
+        outfit_options = ["None"] + [outfit["name"] for outfit in user_outfits]
+        selected_outfit = st.selectbox("Share an outfit", outfit_options)
+        
+        # Upload images
+        uploaded_files = st.file_uploader(
+            "Add photos",
+            accept_multiple_files=True,
+            type=["jpg", "jpeg", "png"]
+        )
+        
+        if st.form_submit_button("Post"):
+            if not content and not uploaded_files and selected_outfit == "None":
+                st.error("Please add some content, photos, or select an outfit to share!")
+                return
+            
+            # Save uploaded images
+            image_paths = []
+            if uploaded_files:
+                for file in uploaded_files:
+                    # Create uploads directory if it doesn't exist
+                    os.makedirs("uploads", exist_ok=True)
+                    
+                    # Generate unique filename
+                    save_path = f"uploads/social_{uuid.uuid4()}_{file.name}"
+                    
+                    # Save the file
+                    with open(save_path, "wb") as f:
+                        f.write(file.getbuffer())
+                    image_paths.append(save_path)
+            
+            # Add outfit images if selected
+            outfit_id = None
+            if selected_outfit != "None":
+                outfit = next((o for o in user_outfits if o["name"] == selected_outfit), None)
+                if outfit:
+                    outfit_id = outfit["id"]
+                    image_paths.extend([item["image_path"] for item in outfit["items"]])
+            
+            # Create post
+            post = create_post(
+                st.session_state.username,
+                content,
+                image_paths,
+                outfit_id
+            )
+            
+            st.success("Post created successfully!")
+            st.rerun()
+
+def load_user_outfits():
+    """Load user's saved outfits"""
+    outfit_file = f"{st.session_state.username}_outfits.json"
+    try:
+        if os.path.exists(outfit_file):
+            with open(outfit_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.error(f"Error loading outfits: {str(e)}")
+    return []
+
+def create_post(user_id, content, image_paths, outfit_id=None):
+    """Create a new social post"""
+    social_data = load_social_data()
+    
+    # Initialize posts list if it doesn't exist
+    if "posts" not in social_data:
+        social_data["posts"] = []
+    
+    new_post = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "content": content,
+        "image_paths": image_paths,
+        "likes": 0,
+        "comments": [],
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "outfit_id": outfit_id
+    }
+    
+    # Add post to the beginning of the list
+    social_data["posts"].insert(0, new_post)
+    save_social_data(social_data)
+    return new_post
+
+def load_social_data():
+    """Load social data from JSON file"""
+    social_file = "social_data.json"
+    try:
+        if os.path.exists(social_file):
+            with open(social_file, 'r') as f:
+                return json.load(f)
+        else:
+            # Initialize default structure if file doesn't exist
+            default_data = {
+                "posts": [],
+                "follows": {},
+                "likes": {},
+                "comments": {},
+                "saved_posts": {}
+            }
+            save_social_data(default_data)
+            return default_data
+    except Exception as e:
+        st.error(f"Error loading social data: {str(e)}")
+        return {
+            "posts": [],
+            "follows": {},
+            "likes": {},
+            "comments": {},
+            "saved_posts": {}
+        }
+
+def save_social_data(data):
+    """Save social data to JSON file"""
+    social_file = "social_data.json"
+    try:
+        # Ensure the data has all required keys
+        required_keys = ["posts", "follows", "likes", "comments", "saved_posts"]
+        for key in required_keys:
+            if key not in data:
+                data[key] = {}
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(social_file) if os.path.dirname(social_file) else '.', exist_ok=True)
+        
+        # Save the data
+        with open(social_file, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        st.error(f"Error saving social data: {str(e)}")
+
+def display_post(post):
+    """Display a single post with interactions"""
+    with st.container():
+        # Post header with user info and timestamp
+        st.markdown(f"""
+            <div style='
+                background-color: white;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 10px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            '>
+                <h4 style='margin: 0;'>👤 {post['user_id']}</h4>
+                <p style='color: #666; font-size: 0.8em; margin: 5px 0;'>
+                    {post['created_at']}
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Post content
+        if post.get('content'):
+            st.markdown(f"<p style='margin: 15px 0;'>{post['content']}</p>", unsafe_allow_html=True)
+        
+        # Display images in a grid
+        if post.get('image_paths'):
+            valid_images = [path for path in post['image_paths'] if os.path.exists(path)]
+            if valid_images:
+                cols = st.columns(min(3, len(valid_images)))
+                for idx, img_path in enumerate(valid_images):
+                    try:
+                        with cols[idx % 3]:
+                            st.image(img_path, use_column_width=True)
+                    except Exception as e:
+                        st.error(f"Error displaying image: {str(e)}")
+        
+        # Interaction buttons
+        col1, col2, col3 = st.columns([1, 1, 4])
+        
+        with col1:
+            # Like button
+            social_data = load_social_data()
+            like_key = f"{st.session_state.username}_{post['id']}"
+            is_liked = like_key in social_data.get("likes", {})
+            like_icon = "❤️" if is_liked else "🤍"
+            
+            if st.button(
+                f"{like_icon} {post.get('likes', 0)}",
+                key=f"like_{post['id']}"
+            ):
+                toggle_like(post['id'])
+                st.rerun()
+        
+        with col2:
+            # Comment button
+            if st.button(
+                "💬 Comment",
+                key=f"comment_{post['id']}"
+            ):
+                st.session_state.commenting_on = post['id']
+        
+        with col3:
+            # Save post button
+            saved_posts = social_data.get("saved_posts", {}).get(st.session_state.username, [])
+            is_saved = post['id'] in saved_posts
+            save_icon = "📑" if is_saved else "🔖"
+            save_text = "Saved" if is_saved else "Save"
+            
+            if st.button(
+                f"{save_icon} {save_text}",
+                key=f"save_{post['id']}"
+            ):
+                toggle_save_post(post['id'])
+                st.rerun()
+        
+        # Comment section
+        if st.session_state.get('commenting_on') == post['id']:
+            with st.form(f"comment_form_{post['id']}"):
+                comment = st.text_input("Add a comment...")
+                if st.form_submit_button("Post Comment"):
+                    if add_comment(post['id'], comment):
+                        st.session_state.commenting_on = None
+                        st.rerun()
+
+        # Display existing comments
+        comments = get_post_comments(post['id'])
+        if comments:
+            with st.expander(f"View {len(comments)} comments"):
+                for comment in comments:
+                    col1, col2 = st.columns([5, 1])
+                    with col1:
+                        st.markdown(f"""
+                            <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 5px 0;'>
+                                <strong>{comment['user_id']}</strong>: {comment['content']}
+                                <br><small style='color: #666;'>{comment['created_at']}</small>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col2:
+                        if comment['user_id'] == st.session_state.username:
+                            if st.button("🗑️", key=f"delete_comment_{comment['id']}"):
+                                if delete_comment(post['id'], comment['id']):
+                                    st.rerun()
+
+def toggle_save_post(post_id):
+    """Toggle save/unsave status for a post"""
+    social_data = load_social_data()
+    
+    if "saved_posts" not in social_data:
+        social_data["saved_posts"] = {}
+    
+    if st.session_state.username not in social_data["saved_posts"]:
+        social_data["saved_posts"][st.session_state.username] = []
+    
+    user_saved_posts = social_data["saved_posts"][st.session_state.username]
+    
+    if post_id in user_saved_posts:
+        user_saved_posts.remove(post_id)
+    else:
+        user_saved_posts.append(post_id)
+    
+    save_social_data(social_data)
+
+def toggle_follow(target_user):
+    """Toggle following status for a user"""
+    try:
+        social_data = load_social_data()
+        
+        # Initialize follows dictionary if it doesn't exist
+        if "follows" not in social_data:
+            social_data["follows"] = {}
+        
+        # Initialize current user's following list if it doesn't exist
+        if st.session_state.username not in social_data["follows"]:
+            social_data["follows"][st.session_state.username] = []
+        
+        following = social_data["follows"][st.session_state.username]
+        
+        # Toggle follow status
+        if target_user in following:
+            # Unfollow
+            following.remove(target_user)
+            st.toast(f"Unfollowed {target_user}", icon="👋")
+        else:
+            # Follow
+            following.append(target_user)
+            st.toast(f"Following {target_user}", icon="✨")
+        
+        # Save updated social data
+        save_social_data(social_data)
+        
+        # Update followers count for target user
+        followers = len([
+            u for u, f in social_data["follows"].items()
+            if target_user in f
+        ])
+        
+        # Update following count for current user
+        following_count = len(social_data["follows"][st.session_state.username])
+        
+        return {
+            "success": True,
+            "followers": followers,
+            "following": following_count
+        }
+        
+    except Exception as e:
+        st.error(f"Error toggling follow status: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def toggle_like(post_id):
+    """Toggle like status for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Initialize likes dictionary if it doesn't exist
+        if "likes" not in social_data:
+            social_data["likes"] = {}
+        
+        # Create unique key for this user-post combination
+        like_key = f"{st.session_state.username}_{post_id}"
+        
+        # Find the post and update likes
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Initialize likes count if it doesn't exist
+                if "likes" not in post:
+                    post["likes"] = 0
+                
+                if like_key in social_data["likes"]:
+                    # Unlike
+                    post["likes"] = max(0, post["likes"] - 1)  # Ensure likes don't go below 0
+                    del social_data["likes"][like_key]
+                    st.toast("Post unliked", icon="💔")
+                else:
+                    # Like
+                    post["likes"] += 1
+                    social_data["likes"][like_key] = {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "post_id": post_id,
+                        "user_id": st.session_state.username
+                    }
+                    st.toast("Post liked!", icon="❤️")
+                break
+        
+        # Save updated social data
+        save_social_data(social_data)
+        
+        return {
+            "success": True,
+            "likes": post.get("likes", 0) if "post" in locals() else 0
+        }
+        
+    except Exception as e:
+        st.error(f"Error toggling like status: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def get_post_likes(post_id):
+    """Get the number of likes for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data.get("posts", []):
+            if post["id"] == post_id:
+                return post.get("likes", 0)
+        
+        return 0
+        
+    except Exception as e:
+        st.error(f"Error getting post likes: {str(e)}")
+        return 0
+
+def has_user_liked_post(post_id):
+    """Check if the current user has liked a post"""
+    try:
+        social_data = load_social_data()
+        like_key = f"{st.session_state.username}_{post_id}"
+        return like_key in social_data.get("likes", {})
+        
+    except Exception as e:
+        st.error(f"Error checking like status: {str(e)}")
+        return False
+
+def get_post_comments(post_id):
+    """Get all comments for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Return comments list, or empty list if no comments
+                return post.get("comments", [])
+        
+        # Return empty list if post not found
+        return []
+        
+    except Exception as e:
+        st.error(f"Error getting comments: {str(e)}")
+        return []
+
+def format_comment_date(timestamp_str):
+    """Format comment timestamp into relative time"""
+    try:
+        comment_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        diff = now - comment_time
+        
+        if diff.days > 7:
+            return comment_time.strftime("%B %d, %Y")
+        elif diff.days > 0:
+            return f"{diff.days}d ago"
+        elif diff.seconds > 3600:
+            return f"{diff.seconds // 3600}h ago"
+        elif diff.seconds > 60:
+            return f"{diff.seconds // 60}m ago"
+        else:
+            return "just now"
+    except Exception:
+        return timestamp_str
+
+def add_comment(post_id, content):
+    """Add a comment to a post"""
+    try:
+        if not content.strip():
+            st.error("Comment cannot be empty")
+            return False
+        
+        social_data = load_social_data()
+        
+        # Create new comment object
+        new_comment = {
+            "id": str(uuid.uuid4()),
+            "user_id": st.session_state.username,
+            "content": content.strip(),
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "likes": 0
+        }
+        
+        # Find the post and add the comment
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Initialize comments list if it doesn't exist
+                if "comments" not in post:
+                    post["comments"] = []
+                
+                # Add the new comment
+                post["comments"].append(new_comment)
+                
+                # Save updated social data
+                save_social_data(social_data)
+                
+                # Show success message
+                st.toast("Comment added successfully!", icon="💬")
+                return True
+        
+        st.error("Post not found")
+        return False
+        
+    except Exception as e:
+        st.error(f"Error adding comment: {str(e)}")
+        return False
+
+def delete_comment(post_id, comment_id):
+    """Delete a comment from a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Find and remove the comment
+                # Only allow deletion if the user is the comment author
+                post["comments"] = [
+                    c for c in post.get("comments", [])
+                    if c["id"] != comment_id or c["user_id"] != st.session_state.username
+                ]
+                
+                # Save updated social data
+                save_social_data(social_data)
+                
+                # Show success message
+                st.toast("Comment deleted", icon="🗑️")
+                return True
+        
+        st.error("Post not found")
+        return False
+        
+    except Exception as e:
+        st.error(f"Error deleting comment: {str(e)}")
+        return False
+
+def can_delete_comment(comment):
+    """Check if current user can delete a comment"""
+    return comment["user_id"] == st.session_state.username
+
 # Main function
 def main():
     """Main function to run the Streamlit app"""
@@ -5452,6 +6080,12 @@ def main():
             login()
         else:
             trading_marketplace()
+
+    # In your main app flow, after authentication
+    if "logged_in" in st.session_state and st.session_state.logged_in:
+        # Add this line to your existing sidebar content
+        st.sidebar.markdown("---")  # Adds a separator line
+        add_social_features()  # Adds the social features section
 
 # At the bottom of your file
 if __name__ == "__main__":
