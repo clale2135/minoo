@@ -65,7 +65,7 @@ def set_custom_style():
        :root {
            --primary-color: #293b22;      /* Emerald Green */
            --primary-hover: #3a5230;      /* Lighter Emerald Green */
-           --background: #1A2918;         /* Darker Emerald Green */
+           --background: #183B11;         /* Darker Emerald Green */
            --text-color: #FFFFFF;         /* White */
            --border-color: #293b22;       /* Emerald Green */
            --accent-color: #4a6940;       /* Light Emerald Green */
@@ -2320,31 +2320,17 @@ def show_landing_page():
             <a href="?page=create_account" style="
                 background: var(--green-gradient);
                 color: white;
-                padding: 15px 25px;
+                padding: 15px 30px;
                 border-radius: 30px;
                 text-decoration: none;
                 font-weight: bold;
                 text-align: center;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 transition: all 0.3s ease;
-                margin-right: 20px;
                 display: inline-block;
-                min-width: 150px;">
+                min-width: 200px;
+                font-size: 1.2rem;">
                 Sign Up Free/Login
-            </a>
-            <a href="?page=login" style="
-                background: var(--green-gradient);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 30px;
-                text-decoration: none;
-                font-weight: bold;
-                text-align: center;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-                transition: all 0.3s ease;
-                display: inline-block;
-                min-width: 150px;">
-                Try Demo
             </a>
         </div>
     """, unsafe_allow_html=True)
@@ -2446,7 +2432,7 @@ def show_landing_page():
                 <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">📸</a>
                 <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">🐦</a>
             </div>
-            <p style="color: rgba(255,255,255,0.5);">© 2023 GreenDrobe. All rights reserved.</p>
+            <p style="color: rgba(255,255,255,0.5);">© 2025 GreenDrobe. All rights reserved.</p>
         </footer>
     """, unsafe_allow_html=True)
 
@@ -2808,11 +2794,7 @@ def show_style_personality_results(personality_analysis):
         st.markdown("#### Styling Tips")
         for tip in recommendations['styling_tips']:
             st.markdown(f"- {tip}")
-    
-    with tabs[3]:
-        st.markdown("#### Shopping Recommendations")
-        st.markdown(recommendations['shopping_guide'])
-    
+        
     # Action steps
     st.markdown("### Next Steps")
     st.markdown("""
@@ -3954,6 +3936,122 @@ def get_style_recommendations(primary, secondary):
     }
     return recommendations
 
+def trading_marketplace():
+    """Main function for the trading marketplace feature"""
+    st.title("👕 Trading Marketplace")
+    
+    # Create tabs for different marketplace functions
+    tab1, tab2 = st.tabs(["Browse Items", "My Listings"])
+    
+    with tab1:
+        st.subheader("Available Items for Trade")
+        marketplace_items = load_marketplace_items()
+        
+        # Filter out user's own listings and completed trades
+        available_items = marketplace_items[
+            (marketplace_items['owner'] != st.session_state.username) & 
+            (marketplace_items['status'] == 'Available')
+        ]
+        
+        if not available_items.empty:
+            for _, item in available_items.iterrows():
+                with st.container():
+                    col1, col2 = st.columns([1, 2])
+                    
+                    with col1:
+                        if os.path.exists(item['image_path']):
+                            st.image(item['image_path'], width=150)
+                        else:
+                            st.image("placeholder.png", width=150)
+                    
+                    with col2:
+                        st.markdown(f"**{item['name']}**")
+                        st.markdown(f"Owner: {item['owner']}")
+                        st.markdown(f"Listed: {item['list_date']}")
+                        st.markdown(f"Trading preferences: {json.loads(item['trade_preferences'])}")
+                        if item['description']:
+                            st.markdown(f"Description: {item['description']}")
+                        
+                        if st.button("Request Trade", key=f"trade_{item['id']}"):
+                            initiate_trade_request(item['id'])
+                    
+                    st.markdown("---")
+        else:
+            st.info("No items available for trade at the moment.")
+    
+    with tab2:
+        st.subheader("My Listed Items")
+        user_listings = load_user_listings()
+        
+        # Add new listing section
+        with st.expander("List New Item for Trade"):
+            user_clothing = load_user_clothing()
+            if not user_clothing.empty:
+                available_items = user_clothing['name'].tolist()
+                selected_item = st.selectbox("Select item to trade", available_items)
+                
+                trade_preferences = st.multiselect(
+                    "What are you looking to trade for?",
+                    ["Tops", "Bottoms", "Dresses", "Outerwear", "Accessories", "Shoes"],
+                    max_selections=3
+                )
+                
+                description = st.text_area(
+                    "Add a description (optional)",
+                    placeholder="Describe what you're looking for, item condition, etc."
+                )
+                
+                if st.button("List Item"):
+                    if trade_preferences:
+                        if list_item_for_trade(selected_item, trade_preferences, description):
+                            st.success("Item listed successfully!")
+                            st.rerun()
+                    else:
+                        st.warning("Please select at least one trade preference.")
+            else:
+                st.warning("You need to add some clothes to your wardrobe first!")
+        
+        # Display user's listings
+        if not user_listings.empty:
+            for _, listing in user_listings.iterrows():
+                with st.container():
+                    col1, col2 = st.columns([1, 2])
+                    
+                    with col1:
+                        if os.path.exists(listing['image_path']):
+                            st.image(listing['image_path'], width=150)
+                        else:
+                            st.image("placeholder.png", width=150)
+                    
+                    with col2:
+                        st.markdown(f"**{listing['name']}**")
+                        st.markdown(f"Status: {listing['status']}")
+                        st.markdown(f"Listed: {listing['list_date']}")
+                        st.markdown(f"Trading preferences: {json.loads(listing['trade_preferences'])}")
+                        if listing['description']:
+                            st.markdown(f"Description: {listing['description']}")
+                        
+                        if listing['status'] == 'Available':
+                            if st.button("Remove Listing", key=f"remove_{listing['id']}"):
+                                remove_listing(listing['id'])
+                                st.success("Listing removed successfully!")
+                                st.rerun()
+                    
+                    st.markdown("---")
+        else:
+            st.info("You haven't listed any items for trade yet.")
+
+def load_marketplace_items():
+    """Load all marketplace items from CSV file"""
+    marketplace_file = "marketplace.csv"
+    if os.path.exists(marketplace_file):
+        return pd.read_csv(marketplace_file)
+    else:
+        return pd.DataFrame(columns=[
+            'id', 'name', 'owner', 'image_path', 'status',
+            'trade_preferences', 'description', 'list_date'
+        ])
+
 def main():
     """Main function to run the Streamlit app"""
     # Initialize session state for style quiz if not exists
@@ -3978,14 +4076,13 @@ def main():
         page = st.sidebar.selectbox(
             "Choose a page",
             ["Home", "Image Uploader and Display", "Saved Clothes", 
-             "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-             "Shopping Recommendations", "Trading Marketplace"],
+             "Saved Outfits", "Outfit Calendar", "Style Quizzes", "Trading Marketplace"],
             index=["Home", "Image Uploader and Display", "Saved Clothes", 
                   "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                  "Shopping Recommendations", "Trading Marketplace"].index(current_page)
+                   "Trading Marketplace"].index(current_page)
                   if current_page in ["Home", "Image Uploader and Display", "Saved Clothes", 
                                     "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                                    "Shopping Recommendations", "Trading Marketplace"] else 0
+                                    "Trading Marketplace"] else 0
         )
     else:
         # For non-logged in users, show Home and Login/Register
@@ -4031,16 +4128,12 @@ def main():
                 schedule_outfits()
             elif page == "Style Quizzes":
                 style_quizzes()
-            elif page == "Shopping Recommendations":
-                shopping_recommendations()
             elif page == "Trading Marketplace":
                 trading_marketplace()
 
-    # Add social features for logged in users
     if st.session_state.logged_in:
-        st.sidebar.markdown("---")  # Adds a separator line
-        add_social_features()  # Adds the social features section
+        st.sidebar.markdown("---") 
+        add_social_features() 
 
-# At the bottom of your file
 if __name__ == "__main__":
     main()

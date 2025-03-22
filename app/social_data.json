@@ -10,7 +10,15 @@
         "uploads/M01T12-TN_Front.webp"
       ],
       "likes": 1,
-      "comments": [],
+      "comments": [
+        {
+          "id": "b709b4cf-37f4-4f59-9527-674159f3d727",
+          "user_id": "f",
+          "content": "tg7yubi",
+          "created_at": "2025-03-22 12:54:36",
+          "likes": 0
+        }
+      ],
       "created_at": "2025-03-09 19:31:44",
       "outfit_id": "72e35552-3a0a-42bd-b3ec-eb870fd21c59"
     },
@@ -36,14 +44,14 @@
     ]
   },
   "likes": {
-    "f_fde0027a-9433-43e0-a7ae-00b05cea26c5": {
-      "timestamp": "2025-03-09 19:24:41",
-      "post_id": "fde0027a-9433-43e0-a7ae-00b05cea26c5",
-      "user_id": "f"
-    },
     "f_6304022a-7bd6-40a6-b5c9-283213de81ec": {
       "timestamp": "2025-03-21 21:03:14",
       "post_id": "6304022a-7bd6-40a6-b5c9-283213de81ec",
+      "user_id": "f"
+    },
+    "f_fde0027a-9433-43e0-a7ae-00b05cea26c5": {
+      "timestamp": "2025-03-22 12:54:50",
+      "post_id": "fde0027a-9433-43e0-a7ae-00b05cea26c5",
       "user_id": "f"
     }
   },
