@@ -1900,7 +1900,6 @@ def run_style_quiz():
                         "accessory_preference": accessory_preference,
                         "style_goals": style_goals,
                         "comfort_style": comfort_style
-                        # Removed shopping_preference as it's no longer collected
                     }
                     
                     style_aesthetic = analyze_style_preferences(style_preferences)
@@ -2306,520 +2305,152 @@ def change_page(page_name: str):
     """
     st.markdown(js, unsafe_allow_html=True)
 
-def homepage():
-    """Display the homepage with outfit challenges and features"""
-
-    import requests
-    from PIL import Image
-    from io import BytesIO
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
+def show_landing_page():
+    """Display landing page for non-authenticated users"""
+    st.markdown('<div class="app-title">GreenDrobe</div>', unsafe_allow_html=True)
     st.markdown('<div class="app-tagline">Effortless Looks, Every Day.</div>', unsafe_allow_html=True)
     
-    # User's Style Profile Summary
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        st.markdown(f"""
-            ### 👋 Welcome back, {st.session_state.username}!
-            
-            Your Style: **{get_user_style()}**
-        """)
-    
-    st.markdown("### 🏆 Outfit Challenges")
-    
-    if st.session_state.get('submitting_challenge', False):
-        if submit_challenge_outfit():
-            return
-    
-    # Weekly Challenge
-    with st.expander("🌟 This Week's Challenge", expanded=True):
-        current_challenge = get_current_challenge()
-        st.markdown(f"""
-            ### {current_challenge['title']}
-            
-            {current_challenge['description']}
-            
-            **Deadline**: {current_challenge['deadline']}
-            **Participants**: {current_challenge['participants']} stylists
-        """)
-        
-        if not check_challenge_participation(st.session_state.username, current_challenge['id']):
-            if st.button("Join Challenge"):
-                join_challenge(st.session_state.username, current_challenge['id'])
-                st.success("You've joined the challenge! Start creating your outfit.")
-        else:
-            st.info("You're participating in this challenge!")
-            if st.button("Submit Outfit"):
-                st.session_state.submitting_challenge = True
-                st.session_state.challenge_id = current_challenge['id']
-                st.rerun()
-
-    # Past Challenges
-    with st.expander("🎨 Past Challenges"):
-        show_past_challenges()
-
-def get_user_style():
-    """Get user's style from their profile"""
-    profile_file = f"{st.session_state.username}_profile.json"
-    if os.path.exists(profile_file):
-        with open(profile_file, 'r') as f:
-            profile_data = json.load(f)
-            return profile_data.get('style_aesthetic', 'Not set')
-    return "Not set"
-
-def get_current_challenge():
-    """Get the current weekly challenge"""
-    challenges_file = "outfit_challenges.json"
-    if not os.path.exists(challenges_file):
-        # Create default challenge if none exists
-        default_challenge = {
-            "id": "challenge_001",
-            "title": "Mix & Match Monochrome",
-            "description": "Create a stunning outfit using only black and white pieces. Show us how you can make monochrome exciting!",
-            "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
-            "participants": 0,
-            "status": "active"
-        }
-        save_challenges([default_challenge])
-        return default_challenge
-    
-    with open(challenges_file, 'r') as f:
-        challenges = json.load(f)
-        return next((c for c in challenges if c['status'] == 'active'), challenges[0])
-
-def check_challenge_participation(username, challenge_id):
-    """Check if user is participating in a challenge"""
-    participations_file = "challenge_participations.json"
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-            return any(p['username'] == username and p['challenge_id'] == challenge_id 
-                      for p in participations)
-    return False
-
-def join_challenge(username, challenge_id):
-    """Add user to challenge participants"""
-    participations_file = "challenge_participations.json"
-    participations = []
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-    
-    participations.append({
-        "username": username,
-        "challenge_id": challenge_id,
-        "joined_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "joined"
-    })
-    
-    with open(participations_file, 'w') as f:
-        json.dump(participations, f, indent=2)
-    
-    # Update challenge participants count
-    challenges_file = "outfit_challenges.json"
-    with open(challenges_file, 'r') as f:
-        challenges = json.load(f)
-    
-    for challenge in challenges:
-        if challenge['id'] == challenge_id:
-            challenge['participants'] += 1
-    
-    with open(challenges_file, 'w') as f:
-        json.dump(challenges, f, indent=2)
-
-def show_past_challenges():
-    """Display past challenges and winners"""
-    challenges_file = "outfit_challenges.json"
-    if os.path.exists(challenges_file):
-        with open(challenges_file, 'r') as f:
-            challenges = json.load(f)
-            past_challenges = [c for c in challenges if c['status'] == 'completed']
-            
-            for challenge in past_challenges[:3]:  # Show last 3 challenges
-                st.markdown(f"""
-                    #### {challenge['title']}
-                    *{challenge['description']}*
-                    
-                    Participants: {challenge['participants']}
-                """)
-                st.markdown("---")
-
-def show_wardrobe_stats():
-    """Display user's wardrobe statistics"""
-    user_clothing = load_user_clothing()
-    
-    if not user_clothing.empty:
-        st.markdown("### 📊 Your Wardrobe Stats")
-        
-        # Basic stats
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Items", len(user_clothing))
-        with col2:
-            st.metric("Types of Clothing", user_clothing['type_of_clothing'].nunique())
-        with col3:
-            st.metric("Color Palette", user_clothing['color'].nunique())
-        
-        # Clothing type distribution
-        st.markdown("#### 👕 Clothing Types")
-        type_counts = user_clothing['type_of_clothing'].value_counts()
-        st.bar_chart(type_counts)
-        
-        # Color distribution
-        st.markdown("#### 🎨 Color Distribution")
-        color_counts = user_clothing['color'].str.split(', ').explode().value_counts()
-        st.bar_chart(color_counts)
-        
-        # Season analysis
-        st.markdown("#### 🌤️ Seasonal Distribution")
-        season_counts = user_clothing['season'].str.split(', ').explode().value_counts()
-        st.bar_chart(season_counts)
-        
-        # Occasion breakdown
-        st.markdown("#### 🎭 Occasion Breakdown")
-        occasion_counts = user_clothing['occasion'].str.split(', ').explode().value_counts()
-        st.bar_chart(occasion_counts)
-        
-        # Recent additions
-        st.markdown("#### 🆕 Recent Additions")
-        recent_items = user_clothing.tail(5)
-        for _, item in recent_items.iterrows():
-            st.markdown(f"- {item['name']} ({item['type_of_clothing']})")
-    else:
-        st.info("Add some clothes to your wardrobe to see statistics!")
-
-def save_challenges(challenges):
-    """Save challenges to JSON file"""
-    challenges_file = "outfit_challenges.json"
-    with open(challenges_file, 'w') as f:
-        json.dump(challenges, f, indent=2)
-
-def submit_challenge_outfit():
-    """Interface for submitting an outfit for a challenge"""
-    st.markdown("### 🎯 Submit Your Challenge Outfit")
-    
-    # Load saved outfits
-    outfits = load_saved_outfits()
-    if not outfits:
-        st.info("You need to create an outfit first! Go to Saved Outfits to create one.")
-        return False
-    
-    # Outfit selection
-    outfit_names = [outfit['name'] for outfit in outfits]
-    selected_outfit_name = st.selectbox(
-        "Select an outfit to submit",
-        options=outfit_names
-    )
-    
-    selected_outfit = next((outfit for outfit in outfits if outfit['name'] == selected_outfit_name), None)
-    
-    if selected_outfit:
-        # Preview selected outfit
-        st.markdown("#### Preview Your Submission:")
-        cols = st.columns(3)
-        for idx, item in enumerate(selected_outfit['items']):
-            with cols[idx % 3]:
-                if os.path.exists(item['image_path']):
-                    image = Image.open(item['image_path'])
-                    st.image(image, caption=item['name'], use_column_width=True)
-        
-        # Description
-        description = st.text_area(
-            "Tell us about your outfit (optional)",
-            placeholder="Explain how your outfit meets the challenge..."
-        )
-        
-        # Submit button
-        if st.button("Submit Challenge Entry", type="primary"):
-            success = save_challenge_submission(
-                username=st.session_state.username,
-                challenge_id=st.session_state.challenge_id,
-                outfit_id=selected_outfit['id'],
-                description=description
-            )
-            if success:
-                st.success("🎉 Your outfit has been submitted to the challenge!")
-                time.sleep(1)
-                st.session_state.submitting_challenge = False
-                st.rerun()
-            else:
-                st.error("Failed to submit outfit. Please try again.")
-    
-    if st.button("Cancel"):
-        st.session_state.submitting_challenge = False
-        st.rerun()
-    
-    return True
-
-def save_challenge_submission(username, challenge_id, outfit_id, description=""):
-    """Save a challenge submission"""
-    try:
-        submissions_file = "challenge_submissions.json"
-        submissions = []
-        if os.path.exists(submissions_file):
-            with open(submissions_file, 'r') as f:
-                submissions = json.load(f)
-        
-        # Create new submission
-        submission = {
-            "id": str(uuid.uuid4()),
-            "username": username,
-            "challenge_id": challenge_id,
-            "outfit_id": outfit_id,
-            "description": description,
-            "submission_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "votes": 0
-        }
-        
-        submissions.append(submission)
-        
-        # Save submissions
-        with open(submissions_file, 'w') as f:
-            json.dump(submissions, f, indent=2)
-        
-        # Update participation status
-        update_participation_status(username, challenge_id, "submitted")
-        
-        return True
-    except Exception as e:
-        st.error(f"Error saving submission: {str(e)}")
-        return False
-
-def update_participation_status(username, challenge_id, status):
-    """Update the status of a user's challenge participation"""
-    participations_file = "challenge_participations.json"
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-        
-        for participation in participations:
-            if (participation['username'] == username and 
-                participation['challenge_id'] == challenge_id):
-                participation['status'] = status
-        
-        with open(participations_file, 'w') as f:
-            json.dump(participations, f, indent=2)
-
-def style_quizzes():
-    """Interactive quizzes for personal style education"""
-    st.title("📚 Style Education & Quizzes")
-    
-    # Quiz Selection
-    quiz_type = st.selectbox(
-        "Choose a Quiz Topic",
-        ["Color Analysis", "Face Shape", "Body Type", "Style Personality", "Wardrobe Essentials"]
-    )
-    
-    if quiz_type == "Color Analysis":
-        color_analysis_quiz()
-    elif quiz_type == "Face Shape":
-        face_shape_quiz()
-    elif quiz_type == "Body Type":
-        body_type_quiz()
-    elif quiz_type == "Style Personality":
-        style_personality_quiz()
-    elif quiz_type == "Wardrobe Essentials":
-        wardrobe_essentials_quiz()
-
-def color_analysis_quiz():
-    """Updated quiz with photo upload for automated color analysis"""
-    st.markdown("### 🎨 Personal Color Analysis")
+    # Brief intro line
     st.markdown("""
-        Let's determine your color season using photo analysis! 
-        Upload a clear photo of yourself taken in natural lighting with minimal makeup.
-    """)
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <p style="font-size: 1.2rem;">Upload your wardrobe, and let AI style your outfits—anytime, anywhere.</p>
+        </div>
+    """, unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader(
-        "Upload your photo",
-        type=['jpg', 'jpeg', 'png'],
-        help="For best results, use a photo taken in natural daylight with a neutral background"
-    )
-    
-    if uploaded_file:
-        # Display uploaded image
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Your uploaded photo", width=300)
-        
-        # Convert image to bytes for API
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format=image.format)
-        img_byte_arr = img_byte_arr.getvalue()
-        
-        if st.button("Analyze My Colors", type="primary"):
-            with st.spinner("Analyzing your colors..."):
-                # Get color analysis from Imagga
-                colors_data = analyze_colors_with_imagga(img_byte_arr)
-                
-                if colors_data:
-                    # Determine color season using GPT-4
-                    analysis = determine_color_season(colors_data)
-                    
-                    if analysis:
-                        st.markdown(f"""
-                            ### 🌟 Your Color Analysis Results
-                            
-                            **Your Color Season:** {analysis['season']}
-                            
-                            **Undertone:** {analysis['undertone']}
-                            
-                            **Most Flattering Colors:**
-                            {', '.join(analysis['flattering_colors'])}
-                            
-                            **Analysis:**
-                            {analysis['explanation']}
-                        """)
-                        
-                        # Save results to user profile
-                        save_color_analysis(
-                            st.session_state.username,
-                            analysis
-                        )
-                        
-                        # Show example outfits
-                        show_example_outfits(analysis['season'])
-                    else:
-                        st.error("Could not determine color season. Please try again.")
-
-def save_color_analysis(username, analysis):
-    """Save color analysis results to user profile"""
-    profile_file = f"{username}_profile.json"
-    profile_data = {}
-    
-    if os.path.exists(profile_file):
-        with open(profile_file, 'r') as f:
-            profile_data = json.load(f)
-    
-    profile_data['color_analysis'] = {
-        'season': analysis['season'],
-        'undertone': analysis['undertone'],
-        'flattering_colors': analysis['flattering_colors'],
-        'analysis_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    with open(profile_file, 'w') as f:
-        json.dump(profile_data, f, indent=2)
-
-def show_example_outfits(color_season):
-    """Show example outfits based on color season"""
-    st.markdown("### 👗 Example Outfits for Your Color Season")
-    
-    # Load user's clothing
-    user_clothing = load_user_clothing()
-    
-    if not user_clothing.empty:
-        # Use GPT-4 to suggest outfits from user's wardrobe that match their color season
-        prompt = f"""Based on this wardrobe data:
-        {user_clothing[['name', 'color', 'type_of_clothing']].to_string()}
-        
-        Suggest 2-3 outfits that would work well for a {color_season} color season.
-        Only include items that actually exist in the wardrobe data.
-        Return each outfit as a list of item names, one outfit per line."""
-        
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a fashion expert specializing in color analysis."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        suggested_outfits = response.choices[0].message.content.strip().split('\n')
-        
-        for i, outfit in enumerate(suggested_outfits, 1):
-            st.markdown(f"#### Outfit {i}")
-            
-            # Display items in the outfit
-            cols = st.columns(3)
-            items = [item.strip() for item in outfit.split(',')]
-            
-            for idx, item_name in enumerate(items):
-                matching_item = user_clothing[user_clothing['name'].str.contains(item_name, case=False)]
-                
-                if not matching_item.empty:
-                    with cols[idx % 3]:
-                        try:
-                            image_path = matching_item.iloc[0]['image_path']
-                            if os.path.exists(image_path):
-                                image = Image.open(image_path)
-                                st.image(image, caption=item_name, use_column_width=True)
-                        except Exception as e:
-                            st.error(f"Error displaying image for: {item_name}")
-            
-            # Option to save the outfit
-            if st.button(f"Save Outfit {i}", key=f"save_outfit_{i}"):
-                # Collect the valid items
-                valid_items = []
-                for item_name in items:
-                    matching_item = user_clothing[user_clothing['name'].str.contains(item_name, case=False)]
-                    if not matching_item.empty:
-                        item_data = matching_item.iloc[0]
-                        valid_items.append({
-                            "name": item_data['name'],
-                            "image_path": item_data['image_path'],
-                            "type_of_clothing": item_data['type_of_clothing'],
-                            "color": item_data['color']
-                        })
-                
-                if valid_items:
-                    outfit_name = f"Color Season Outfit {datetime.now().strftime('%Y%m%d_%H%M')}"
-                    if save_outfit(valid_items, outfit_name, f"{color_season} Season"):
-                        st.success(f"✨ Outfit saved as '{outfit_name}'!")
-    else:
-        st.info("Add some clothes to your wardrobe to see personalized outfit suggestions!")
-
-def face_shape_quiz():
-    """Quiz to determine user's face shape"""
-    st.markdown("### 👤 Face Shape Analysis")
+    # Call-to-action buttons
     st.markdown("""
-        Understanding your face shape helps you choose the most flattering:
-        - Hairstyles
-        - Glasses frames
-        - Necklines
-        - Accessories
-    """)
+        <div style="display: flex; justify-content: center; gap: 20px; margin: 30px 0;">
+            <a href="?page=create_account" style="
+                background: var(--green-gradient);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 30px;
+                text-decoration: none;
+                font-weight: bold;
+                text-align: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+                display: inline-block;
+                min-width: 150px;">
+                Sign Up Free
+            </a>
+            <a href="?page=demo" style="
+                background: var(--green-gradient);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 30px;
+                text-decoration: none;
+                font-weight: bold;
+                text-align: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+                display: inline-block;
+                min-width: 150px;">
+                Try Demo
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
     
-    questions = {
-        'face_length': {
-            'question': "How would you describe your face length?",
-            'options': [
-                "Longer than it is wide",
-                "About equal in length and width",
-                "Wider than it is long"
-            ]
-        },
-        'jaw_shape': {
-            'question': "Which best describes your jaw?",
-            'options': [
-                "Angular and sharp",
-                "Rounded",
-                "Square and prominent",
-                "Narrow and pointed"
-            ]
-        },
-        'cheekbones': {
-            'question': "How would you describe your cheekbones?",
-            'options': [
-                "High and prominent",
-                "Round and full",
-                "Not very prominent",
-                "Wide and angular"
-            ]
-        }
-    }
+    # How It Works section
+    st.markdown("""
+        <div style="margin: 3rem 0;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">How It Works</h2>
+            <div style="display: flex; justify-content: space-between; gap: 20px; text-align: center;">
+                <div style="flex: 1; padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">📸</div>
+                    <h3>1. Upload Your Clothes</h3>
+                    <p>Snap photos of your wardrobe items and let our AI categorize them automatically.</p>
+                </div>
+                <div style="flex: 1; padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">🤖</div>
+                    <h3>2. Let AI Suggest Outfits</h3>
+                    <p>Our AI analyzes your style and creates personalized outfit combinations.</p>
+                </div>
+                <div style="flex: 1; padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">💾</div>
+                    <h3>3. Save or Share Your Look</h3>
+                    <p>Save your favorite outfits, schedule them for specific days, or share with friends.</p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    responses = {}
-    for key, data in questions.items():
-        responses[key] = st.radio(
-            data['question'],
-            data['options'],
-            key=f"face_{key}"
-        )
-        st.markdown("---")
+    # Features / Benefits
+    st.markdown("""
+        <div style="margin: 3rem 0;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Features & Benefits</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>🧠 Smart Outfit Recommendations</h3>
+                    <p>Our AI learns your style preferences and suggests outfits that match your taste.</p>
+                </div>
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>🌤️ Weather-Based Suggestions</h3>
+                    <p>Get outfit ideas that are appropriate for the current weather in your location.</p>
+                </div>
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>🗄️ Closet Organization</h3>
+                    <p>Categorize and filter your clothes by type, color, season, and occasion.</p>
+                </div>
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>📅 Daily Outfit Planner</h3>
+                    <p>Schedule outfits for specific days and never worry about what to wear.</p>
+                </div>
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>📱 Easy-to-Use Interface</h3>
+                    <p>Intuitive design makes managing your wardrobe simple and enjoyable.</p>
+                </div>
+                <div style="padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <h3>🔄 Outfit Challenges</h3>
+                    <p>Participate in style challenges to discover new ways to wear your clothes.</p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    if st.button("Determine My Face Shape", type="primary"):
-        face_shape = analyze_face_shape(responses)
-        show_face_shape_results(face_shape)
+    # Final CTA
+    st.markdown("""
+        <div style="text-align: center; margin: 3rem 0; padding: 2rem; background-color: rgba(255,255,255,0.05); border-radius: 10px;">
+            <h2>Ready to Transform Your Wardrobe Experience?</h2>
+            <p style="margin: 1rem 0; font-size: 1.1rem;">Join thousands of users who have simplified their daily style decisions.</p>
+            <div style="margin-top: 1.5rem;">
+                <a href="?page=create_account" style="
+                    background: var(--green-gradient);
+                    color: white;
+                    padding: 15px 30px;
+                    border-radius: 30px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    text-align: center;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                    transition: all 0.3s ease;
+                    display: inline-block;
+                    font-size: 1.2rem;">
+                    Start Building Your Closet
+                </a>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown("""
+        <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <a href="#" style="color: inherit; text-decoration: none;">About</a>
+                <a href="#" style="color: inherit; text-decoration: none;">Contact</a>
+                <a href="#" style="color: inherit; text-decoration: none;">FAQ</a>
+                <a href="#" style="color: inherit; text-decoration: none;">Terms of Service</a>
+                <a href="#" style="color: inherit; text-decoration: none;">Privacy Policy</a>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">📱</a>
+                <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">📘</a>
+                <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">📸</a>
+                <a href="#" style="color: inherit; margin: 0 10px; font-size: 1.2rem;">🐦</a>
+            </div>
+            <p style="color: rgba(255,255,255,0.5);">© 2023 GreenDrobe. All rights reserved.</p>
+        </footer>
+    """, unsafe_allow_html=True)
 
 def body_type_quiz():
     """Quiz to determine user's body type"""
@@ -4303,6 +3934,51 @@ def social_media_features():
                 except Exception as e:
                     st.error(f"Error saving social connections: {str(e)}")
 
+def get_style_recommendations(primary, secondary):
+    """Get style recommendations based on primary and secondary style personalities"""
+    # Create a base template for recommendations
+    recommendations = {
+        "essentials": [
+            f"{primary}-inspired basics that can be mixed with {secondary} elements",
+            f"Versatile pieces that work for both {primary} and {secondary} styles",
+            "Quality foundation pieces in neutral colors",
+            f"Statement accessories that reflect your {primary} style"
+        ],
+        "colors": f"A balanced palette combining {primary} and {secondary} color preferences, with neutrals as a foundation.",
+        "styling_tips": [
+            f"Layer {primary} basics with {secondary} statement pieces",
+            "Use accessories to shift between your style personalities",
+            "Create outfit formulas that work for your lifestyle",
+            f"Balance {primary} and {secondary} elements in each outfit"
+        ],
+        "shopping_guide": f"# Currently under development\n# Will provide personalized store recommendations based on your {primary} and {secondary} style preferences."
+        # "shopping_guide": f"Look for stores that cater to both {primary} and {secondary} aesthetics. Consider {get_store_recommendations(primary, secondary)}."
+    }
+    return recommendations
+
+# Comment out the store recommendations function for now
+"""
+def get_store_recommendations(primary, secondary):
+    # This would be a more sophisticated recommendation engine in production
+    store_map = {
+        "Classic": ["J.Crew", "Banana Republic", "Brooks Brothers"],
+        "Minimalist": ["COS", "Everlane", "Uniqlo"],
+        "Creative": ["Anthropologie", "Free People", "Urban Outfitters"],
+        "Romantic": ["& Other Stories", "Reformation", "Aritzia"],
+        "Natural": ["Madewell", "Patagonia", "Eileen Fisher"],
+        "Dramatic": ["Zara", "All Saints", "Diesel"],
+        "Trendy": ["H&M", "ASOS", "Topshop"],
+        "Elegant": ["Theory", "Club Monaco", "Reiss"]
+    }
+    
+    primary_stores = store_map.get(primary, ["Nordstrom"])
+    secondary_stores = store_map.get(secondary, ["Macy's"])
+    
+    # Combine and select a subset of stores
+    combined = primary_stores + [s for s in secondary_stores if s not in primary_stores]
+    return ", ".join(combined[:3])
+"""
+
 # Main function
 def main():
     """Main function to run the Streamlit app"""
@@ -4329,7 +4005,7 @@ def main():
     
     # Display the selected page
     if page == "Home":
-        homepage()
+        show_landing_page()
     elif page == "Login/Register":
         if not st.session_state.logged_in:
             tab1, tab2 = st.tabs(["Login", "Create Account"])
