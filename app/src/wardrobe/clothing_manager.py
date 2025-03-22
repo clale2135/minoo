@@ -4,53 +4,12 @@ import streamlit as st
 import pandas as pd
 import os
 from PIL import Image
-<<<<<<< HEAD
-import json
-from datetime import datetime
-
-def load_user_clothing():
-    """Load user's clothing items from CSV"""
-    if "username" not in st.session_state:
-        return pd.DataFrame()
-        
-    clothing_file = f"{st.session_state.username}_clothing.csv"
-    if os.path.exists(clothing_file):
-        return pd.read_csv(clothing_file)
-    return pd.DataFrame(columns=[
-        'name', 'type_of_clothing', 'color', 'season', 
-        'occasion', 'image_path', 'additional_details'
-    ])
-
-def save_user_clothing(df):
-    """Save user's clothing items to CSV"""
-    if "username" not in st.session_state:
-        return False
-        
-    clothing_file = f"{st.session_state.username}_clothing.csv"
-    try:
-        df.to_csv(clothing_file, index=False)
-        return True
-    except Exception as e:
-        st.error(f"Error saving clothing data: {str(e)}")
-        return False
-
-def check_duplicate_name(name: str, user_clothing: pd.DataFrame) -> bool:
-    """Check if a clothing item name already exists"""
-    return name.lower() in user_clothing['name'].str.lower().values
-
-def suggest_unique_name(base_name: str, user_clothing: pd.DataFrame) -> str:
-    """Suggest a unique name for a clothing item"""
-    counter = 1
-    new_name = base_name
-    while check_duplicate_name(new_name, user_clothing):
-        counter += 1
-        new_name = f"{base_name} {counter}"
-    return new_name 
-=======
 import uuid
 import openai
 from pydantic import BaseModel
 import plotly.express as px
+import json
+from datetime import datetime
 
 # Clothing Item Response Model
 class ClothingItemResponse(BaseModel):
@@ -86,7 +45,6 @@ def gpt4o_structured_clothing(item_description: str):
             ]
         )
         
-        import json
         response_text = response.choices[0].message.content.strip()
         clothing_data = json.loads(response_text)
         
@@ -110,6 +68,9 @@ def gpt4o_structured_clothing(item_description: str):
 
 def load_user_clothing():
     """Load user's clothing data from CSV"""
+    if "username" not in st.session_state:
+        return pd.DataFrame()
+        
     user_file = f"{st.session_state.username}_clothing.csv"
     if os.path.exists(user_file):
         return pd.read_csv(user_file)
@@ -118,8 +79,16 @@ def load_user_clothing():
 
 def save_user_clothing(df):
     """Save user's clothing data to CSV"""
+    if "username" not in st.session_state:
+        return False
+        
     user_file = f"{st.session_state.username}_clothing.csv"
-    df.to_csv(user_file, index=False)
+    try:
+        df.to_csv(user_file, index=False)
+        return True
+    except Exception as e:
+        st.error(f"Error saving clothing data: {str(e)}")
+        return False
 
 def check_duplicate_name(name: str, user_clothing: pd.DataFrame) -> bool:
     """Check if a name already exists in the user's clothing database"""
@@ -540,5 +509,4 @@ def calculate_versatility_score(df):
         style_count = df['style'].nunique()
         score += min(10, (style_count / 5) * 10)
     
-    return round(score) 
->>>>>>> 82784ae66500dcd327bb26ca80802df0894371fb
+    return round(score)

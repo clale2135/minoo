@@ -1,9 +1,9 @@
-<<<<<<< HEAD
 """GPT-4 helper functions for generating structured responses"""
 
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
@@ -33,10 +33,6 @@ def gpt4_structured_response(prompt, system_role="You are a helpful assistant.",
     except Exception as e:
         print(f"Error getting GPT-4 response: {str(e)}")
         return None 
-=======
-import openai
-import os
-from pydantic import BaseModel
 
 class ClothingItemResponse(BaseModel):
     name: str
@@ -56,5 +52,4 @@ def analyze_style_preferences(responses):
 
 def suggest_weather_appropriate_outfit(weather_data, wardrobe):
     # Your weather outfit suggestion code here
-    pass 
->>>>>>> 82784ae66500dcd327bb26ca80802df0894371fb
+    pass

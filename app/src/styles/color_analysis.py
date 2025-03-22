@@ -1,45 +1,3 @@
-<<<<<<< HEAD
-def analyze_colors_with_imagga(image_path):
-    # Placeholder for color analysis functionality
-    return []
-
-def determine_color_season(colors):
-    # Placeholder for season determination
-    return "All Seasons"
-
-def get_season_colors(season):
-    # Dictionary of colors for each season
-    season_colors = {
-        "Spring": ["coral", "peach", "golden yellow", "bright green"],
-        "Summer": ["soft pink", "powder blue", "lavender", "mint"],
-        "Fall": ["rust", "olive", "warm brown", "burgundy"],
-        "Winter": ["pure white", "black", "royal blue", "true red"]
-    }
-    return season_colors.get(season, []) 
-=======
-<<<<<<< HEAD
-"""Color analysis module for determining user's color season"""
-
-def analyze_colors_with_imagga(image_bytes):
-    """Analyze colors in an image using Imagga API"""
-    # Placeholder for actual API implementation
-    return []
-
-def determine_color_season(colors_data):
-    """Determine a user's color season based on their coloring"""
-    # Placeholder implementation
-    return "Spring"
-
-def get_season_colors(season):
-    """Get the color palette for a given season"""
-    season_colors = {
-        "Spring": ["Warm Yellow", "Coral", "Peach", "Light Green", "Aqua"],
-        "Summer": ["Soft Pink", "Lavender", "Light Blue", "Mint", "Gray"],
-        "Autumn": ["Rust", "Olive", "Warm Brown", "Terracotta", "Gold"],
-        "Winter": ["Pure White", "Black", "Royal Blue", "Deep Purple", "True Red"]
-    }
-    return season_colors.get(season, []) 
-=======
 import streamlit as st
 import requests
 import os
@@ -331,6 +289,4 @@ def show_color_swatch(hex_color, name):
                 '>{hex_color}</div>
             </div>
         </div>
-    """, unsafe_allow_html=True) 
->>>>>>> 82784ae66500dcd327bb26ca80802df0894371fb
->>>>>>> 7b3a50d0eb23e94ce0899f6752bbb7768815a0da
+    """, unsafe_allow_html=True)

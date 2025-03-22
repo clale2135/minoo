@@ -16,7 +16,9 @@ import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
 import io
-import base64  # Add this at the top with other imports
+import functools
+from src.quizzes.quiz_handlers import style_quizzes
+
 try:
     import pyperclip
 except ImportError:
@@ -2306,20 +2308,15 @@ def change_page(page_name: str):
     st.markdown(js, unsafe_allow_html=True)
 
 def show_landing_page():
-    """Display landing page for non-authenticated users"""
-    st.markdown('<div class="app-title">GreenDrobe</div>', unsafe_allow_html=True)
-    st.markdown('<div class="app-tagline">Effortless Looks, Every Day.</div>', unsafe_allow_html=True)
-    
-    # Brief intro line
+    """Show the landing page for non-authenticated users"""
     st.markdown("""
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <p style="font-size: 1.2rem;">Upload your wardrobe, and let AI style your outfits—anytime, anywhere.</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Call-to-action buttons
-    st.markdown("""
-        <div style="display: flex; justify-content: center; gap: 20px; margin: 30px 0;">
+        <h1 style="text-align: center; font-size: 3rem; margin: 2rem 0;">
+            Welcome to GreenDrobe
+        </h1>
+        <p style="text-align: center; font-size: 1.5rem; margin-bottom: 2rem;">
+            Effortless Looks, Every Day.
+        </p>
+        <div style="text-align: center; margin: 2rem 0;">
             <a href="?page=create_account" style="
                 background: var(--green-gradient);
                 color: white;
@@ -2330,11 +2327,12 @@ def show_landing_page():
                 text-align: center;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 transition: all 0.3s ease;
+                margin-right: 20px;
                 display: inline-block;
                 min-width: 150px;">
-                Sign Up Free
+                Sign Up Free/Login
             </a>
-            <a href="?page=demo" style="
+            <a href="?page=login" style="
                 background: var(--green-gradient);
                 color: white;
                 padding: 15px 25px;
