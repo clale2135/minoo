@@ -1,23 +1,32 @@
 import streamlit as st
-from pydantic import BaseModel
-from dotenv import load_dotenv
-import openai
 import os
-from PIL import Image
 import pandas as pd
 import hashlib
-import uuid
+from datetime import datetime
 import json
-from datetime import datetime, timedelta
+import numpy as np
+from pydantic import BaseModel
+import pyperclip
+import sqlite3
+from dotenv import load_dotenv
+import openai
+from PIL import Image
+import uuid
 import time
 import requests
 import re
-import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
 import io
 import functools
 from src.quizzes.quiz_handlers import style_quizzes
+
+# Must be the first Streamlit command
+st.set_page_config(
+    page_title="Wardrobe App",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 try:
     import pyperclip
@@ -28,17 +37,142 @@ except ImportError:
             st.code(text, language=None)
     pyperclip = PyperclipFallback()
 
+# Load environment variables
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
-USER_DB_PATH = "user_db.csv"
 
-# Must be the first Streamlit command
-st.set_page_config(
-    page_title="Wardrobe App",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Initialize database connection and tables
+def get_db():
+    """Get database connection"""
+    db_path = 'greendrobe.db'
+    # Create the database directory if it doesn't exist
+    os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
+    
+    # Initialize the database if it doesn't exist
+    conn = sqlite3.connect(db_path)
+    init_db()  # Remove the conn parameter
+    return conn
+
+@st.cache_resource
+def init_db(conn=None):
+    """Initialize database tables"""
+    if conn is None:
+        conn = sqlite3.connect('greendrobe.db')
+    
+    c = conn.cursor()
+    
+    # Create users table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    ''')
+    
+    # Create clothing table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS clothing (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            name TEXT NOT NULL,
+            color TEXT,
+            type_of_clothing TEXT,
+            season TEXT,
+            occasion TEXT,
+            image_path TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create outfits table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS outfits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            outfit_name TEXT NOT NULL,
+            items TEXT,
+            style_description TEXT,
+            occasion TEXT,
+            styling_tips TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create user_profiles table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            username TEXT PRIMARY KEY,
+            style_aesthetic TEXT,
+            quiz_date TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create social tables
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            content TEXT,
+            image_paths TEXT,
+            outfit_id INTEGER,
+            timestamp TEXT NOT NULL,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS follows (
+            follower TEXT NOT NULL,
+            following TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (follower, following),
+            FOREIGN KEY (follower) REFERENCES users (username),
+            FOREIGN KEY (following) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS likes (
+            username TEXT NOT NULL,
+            post_id INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (username, post_id),
+            FOREIGN KEY (username) REFERENCES users (username),
+            FOREIGN KEY (post_id) REFERENCES posts (id)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            FOREIGN KEY (post_id) REFERENCES posts (id),
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS saved_posts (
+            username TEXT NOT NULL,
+            post_id INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (username, post_id),
+            FOREIGN KEY (username) REFERENCES users (username),
+            FOREIGN KEY (post_id) REFERENCES posts (id)
+        )
+    ''')
+    
+    conn.commit()
+    if conn != None:  # Only close if we created our own connection
+        conn.close()
+
+# Initialize the database when the app starts
+init_db()
 
 def set_custom_style():
    st.markdown("""
@@ -264,48 +398,55 @@ def hash_password(password):
 
 
 def load_user_db():
-   if not os.path.exists(USER_DB_PATH):
-       df = pd.DataFrame(columns=["username", "password"])
-       df.to_csv(USER_DB_PATH, index=False)
-   try:
-       df = pd.read_csv(USER_DB_PATH)
-   except pd.errors.EmptyDataError:
-       df = pd.DataFrame(columns=["username", "password"])
-   return df
+    conn = get_db()
+    df = pd.read_sql_query("SELECT * FROM users", conn)
+    conn.close()
+    return df
 
 
 
 
 def save_user_db(df):
-   df.to_csv(USER_DB_PATH, index=False)
+    conn = get_db()
+    df.to_sql('users', conn, if_exists='replace', index=False)
+    conn.close()
 
 
 
 
 def user_exists(username):
-   df = load_user_db()
-   return username in df["username"].values
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+    exists = c.fetchone() is not None
+    conn.close()
+    return exists
 
 
 
 
 def add_user(username, password):
-   df = load_user_db()
-   hashed_password = hash_password(password)
-   new_user = pd.DataFrame({"username": [username], "password": [hashed_password]})
-   df = pd.concat([df, new_user], ignore_index=True)
-   save_user_db(df)
+    conn = get_db()
+    c = conn.cursor()
+    hashed_password = hash_password(password)
+    c.execute("INSERT INTO users (username, password) VALUES (?, ?)", 
+             (username, hashed_password))
+    conn.commit()
+    conn.close()
 
 
 
 
 def verify_user(username, password):
-   df = load_user_db()
-   hashed_password = hash_password(password)
-   if username in df["username"].values:
-       stored_password = df[df["username"] == username]["password"].values[0]
-       return stored_password == hashed_password
-   return False
+    conn = get_db()
+    c = conn.cursor()
+    hashed_password = hash_password(password)
+    c.execute("SELECT password FROM users WHERE username = ?", (username,))
+    result = c.fetchone()
+    conn.close()
+    if result:
+        return result[0] == hashed_password
+    return False
 
 
 
@@ -426,22 +567,36 @@ def gpt4o_structured_clothing(item_description: str):
 
 # Clothing management functions
 def load_user_clothing():
-   user_file = f"{st.session_state.username}_clothing.csv"
-   if os.path.exists(user_file):
-       return pd.read_csv(user_file)
-   else:
-       return pd.DataFrame(columns=["id", "name", "color", "type_of_clothing", "season", "occasion", "image_path"])
-
-
-
+    if "username" not in st.session_state:
+        return pd.DataFrame()
+    
+    conn = get_db()
+    query = "SELECT * FROM clothing WHERE username = ?"
+    df = pd.read_sql_query(query, conn, params=(st.session_state.username,))
+    conn.close()
+    
+    if len(df) == 0:
+        return pd.DataFrame(columns=["id", "name", "color", "type_of_clothing", "season", "occasion", "image_path"])
+    return df
 
 def save_user_clothing(df):
-   """Save the user's clothing data to a CSV file"""
-   user_file = f"{st.session_state.username}_clothing.csv"
-   df.to_csv(user_file, index=False)
-
-
-
+    if "username" not in st.session_state:
+        return False
+    
+    conn = get_db()
+    # Add username column if it doesn't exist
+    if 'username' not in df.columns:
+        df['username'] = st.session_state.username
+    
+    # Remove any existing entries for this user
+    c = conn.cursor()
+    c.execute("DELETE FROM clothing WHERE username = ?", (st.session_state.username,))
+    
+    # Insert new data
+    df.to_sql('clothing', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()
+    return True
 
 def check_duplicate_name(name: str, user_clothing: pd.DataFrame) -> bool:
    """Check if a name already exists in the user's clothing database"""
@@ -1975,15 +2130,17 @@ def analyze_style_preferences(preferences):
 def save_user_style(username, style_aesthetic):
     """Save user's style aesthetic to their profile"""
     try:
-        profile_file = f"{username}_profile.json"
-        profile_data = {
-            "style_aesthetic": style_aesthetic,
-            "quiz_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+        conn = get_db()
+        c = conn.cursor()
         
-        with open(profile_file, 'w') as f:
-            json.dump(profile_data, f, indent=2)
-            
+        # Update or insert the style profile
+        c.execute("""
+            INSERT OR REPLACE INTO user_profiles (username, style_aesthetic, quiz_date)
+            VALUES (?, ?, ?)
+        """, (username, json.dumps(style_aesthetic), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        
+        conn.commit()
+        conn.close()
     except Exception as e:
         st.error(f"Error saving style profile: {str(e)}")
 
@@ -3156,14 +3313,26 @@ def create_new_post():
 
 def load_user_outfits():
     """Load user's saved outfits"""
-    outfit_file = f"{st.session_state.username}_outfits.json"
+    if "username" not in st.session_state:
+        return []
+    
     try:
-        if os.path.exists(outfit_file):
-            with open(outfit_file, 'r') as f:
-                return json.load(f)
+        conn = get_db()
+        query = "SELECT * FROM outfits WHERE username = ?"
+        df = pd.read_sql_query(query, conn, params=(st.session_state.username,))
+        conn.close()
+        
+        if len(df) == 0:
+            return []
+        
+        # Convert the items column from string back to list
+        outfits = df.to_dict('records')
+        for outfit in outfits:
+            outfit['items'] = json.loads(outfit['items']) if outfit['items'] else []
+        return outfits
     except Exception as e:
         st.error(f"Error loading outfits: {str(e)}")
-    return []
+        return []
 
 def create_post(user_id, content, image_paths, outfit_id=None):
     """Create a new social post"""
@@ -3190,51 +3359,124 @@ def create_post(user_id, content, image_paths, outfit_id=None):
     return new_post
 
 def load_social_data():
-    """Load social data from JSON file"""
-    social_file = "social_data.json"
-    try:
-        if os.path.exists(social_file):
-            with open(social_file, 'r') as f:
-                return json.load(f)
-        else:
-            # Initialize default structure if file doesn't exist
-            default_data = {
-                "posts": [],
-                "follows": {},
-                "likes": {},
-                "comments": {},
-                "saved_posts": {}
-            }
-            save_social_data(default_data)
-            return default_data
-    except Exception as e:
-        st.error(f"Error loading social data: {str(e)}")
-        return {
-            "posts": [],
-            "follows": {},
-            "likes": {},
-            "comments": {},
-            "saved_posts": {}
-        }
+    """Load social data from database"""
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Get posts
+    posts_df = pd.read_sql_query("SELECT * FROM posts ORDER BY timestamp DESC", conn)
+    posts = posts_df.to_dict('records')
+    for post in posts:
+        post['image_paths'] = json.loads(post['image_paths']) if post['image_paths'] else []
+    
+    # Get follows
+    follows_df = pd.read_sql_query("SELECT * FROM follows", conn)
+    follows = {}
+    for _, row in follows_df.iterrows():
+        if row['follower'] not in follows:
+            follows[row['follower']] = []
+        follows[row['follower']].append(row['following'])
+    
+    # Get likes
+    likes_df = pd.read_sql_query("SELECT * FROM likes", conn)
+    likes = {}
+    for _, row in likes_df.iterrows():
+        if row['post_id'] not in likes:
+            likes[row['post_id']] = []
+        likes[row['post_id']].append(row['username'])
+    
+    # Get comments
+    comments_df = pd.read_sql_query("SELECT * FROM comments ORDER BY timestamp", conn)
+    comments = {}
+    for _, row in comments_df.iterrows():
+        if row['post_id'] not in comments:
+            comments[row['post_id']] = []
+        comments[row['post_id']].append(row.to_dict())
+    
+    # Get saved posts
+    saved_df = pd.read_sql_query("SELECT * FROM saved_posts", conn)
+    saved_posts = {}
+    for _, row in saved_df.iterrows():
+        if row['username'] not in saved_posts:
+            saved_posts[row['username']] = []
+        saved_posts[row['username']].append(row['post_id'])
+    
+    conn.close()
+    
+    return {
+        "posts": posts,
+        "follows": follows,
+        "likes": likes,
+        "comments": comments,
+        "saved_posts": saved_posts
+    }
 
 def save_social_data(data):
-    """Save social data to JSON file"""
-    social_file = "social_data.json"
-    try:
-        # Ensure the data has all required keys
-        required_keys = ["posts", "follows", "likes", "comments", "saved_posts"]
-        for key in required_keys:
-            if key not in data:
-                data[key] = {}
-        
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(social_file) if os.path.dirname(social_file) else '.', exist_ok=True)
-        
-        # Save the data
-        with open(social_file, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        st.error(f"Error saving social data: {str(e)}")
+    """Save social data to database"""
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Clear existing data
+    c.execute("DELETE FROM posts")
+    c.execute("DELETE FROM follows")
+    c.execute("DELETE FROM likes")
+    c.execute("DELETE FROM comments")
+    c.execute("DELETE FROM saved_posts")
+    
+    # Save posts
+    for post in data['posts']:
+        c.execute("""
+            INSERT INTO posts (id, username, content, image_paths, outfit_id, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            post['id'],
+            post['username'],
+            post['content'],
+            json.dumps(post['image_paths']),
+            post.get('outfit_id'),
+            post['timestamp']
+        ))
+    
+    # Save follows
+    for follower, following_list in data['follows'].items():
+        for following in following_list:
+            c.execute("""
+                INSERT INTO follows (follower, following, timestamp)
+                VALUES (?, ?, ?)
+            """, (follower, following, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    # Save likes
+    for post_id, users in data['likes'].items():
+        for username in users:
+            c.execute("""
+                INSERT INTO likes (username, post_id, timestamp)
+                VALUES (?, ?, ?)
+            """, (username, post_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    # Save comments
+    for post_id, comment_list in data['comments'].items():
+        for comment in comment_list:
+            c.execute("""
+                INSERT INTO comments (id, post_id, username, content, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                comment['id'],
+                comment['post_id'],
+                comment['username'],
+                comment['content'],
+                comment['timestamp']
+            ))
+    
+    # Save saved posts
+    for username, post_ids in data['saved_posts'].items():
+        for post_id in post_ids:
+            c.execute("""
+                INSERT INTO saved_posts (username, post_id, timestamp)
+                VALUES (?, ?, ?)
+            """, (username, post_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    conn.commit()
+    conn.close()
 
 def display_post(post):
     """Display a single post with interactions"""
@@ -4051,6 +4293,238 @@ def load_marketplace_items():
             'id', 'name', 'owner', 'image_path', 'status',
             'trade_preferences', 'description', 'list_date'
         ])
+
+def init_db():
+    conn = sqlite3.connect('greendrobe.db')
+    c = conn.cursor()
+    
+    # Create users table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    ''')
+    
+    # Create clothing table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS clothing (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            name TEXT NOT NULL,
+            color TEXT,
+            type_of_clothing TEXT,
+            season TEXT,
+            occasion TEXT,
+            image_path TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create outfits table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS outfits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            outfit_name TEXT NOT NULL,
+            items TEXT,
+            style_description TEXT,
+            occasion TEXT,
+            styling_tips TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create user_profiles table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            username TEXT PRIMARY KEY,
+            style_aesthetic TEXT,
+            quiz_date TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    # Create social tables
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            content TEXT,
+            image_paths TEXT,
+            outfit_id INTEGER,
+            timestamp TEXT NOT NULL,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS follows (
+            follower TEXT NOT NULL,
+            following TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (follower, following),
+            FOREIGN KEY (follower) REFERENCES users (username),
+            FOREIGN KEY (following) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS likes (
+            username TEXT NOT NULL,
+            post_id INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (username, post_id),
+            FOREIGN KEY (username) REFERENCES users (username),
+            FOREIGN KEY (post_id) REFERENCES posts (id)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            FOREIGN KEY (post_id) REFERENCES posts (id),
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS saved_posts (
+            username TEXT NOT NULL,
+            post_id INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            PRIMARY KEY (username, post_id),
+            FOREIGN KEY (username) REFERENCES users (username),
+            FOREIGN KEY (post_id) REFERENCES posts (id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+def load_social_data():
+    """Load social data from database"""
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Get posts
+    posts_df = pd.read_sql_query("SELECT * FROM posts ORDER BY timestamp DESC", conn)
+    posts = posts_df.to_dict('records')
+    for post in posts:
+        post['image_paths'] = json.loads(post['image_paths']) if post['image_paths'] else []
+    
+    # Get follows
+    follows_df = pd.read_sql_query("SELECT * FROM follows", conn)
+    follows = {}
+    for _, row in follows_df.iterrows():
+        if row['follower'] not in follows:
+            follows[row['follower']] = []
+        follows[row['follower']].append(row['following'])
+    
+    # Get likes
+    likes_df = pd.read_sql_query("SELECT * FROM likes", conn)
+    likes = {}
+    for _, row in likes_df.iterrows():
+        if row['post_id'] not in likes:
+            likes[row['post_id']] = []
+        likes[row['post_id']].append(row['username'])
+    
+    # Get comments
+    comments_df = pd.read_sql_query("SELECT * FROM comments ORDER BY timestamp", conn)
+    comments = {}
+    for _, row in comments_df.iterrows():
+        if row['post_id'] not in comments:
+            comments[row['post_id']] = []
+        comments[row['post_id']].append(row.to_dict())
+    
+    # Get saved posts
+    saved_df = pd.read_sql_query("SELECT * FROM saved_posts", conn)
+    saved_posts = {}
+    for _, row in saved_df.iterrows():
+        if row['username'] not in saved_posts:
+            saved_posts[row['username']] = []
+        saved_posts[row['username']].append(row['post_id'])
+    
+    conn.close()
+    
+    return {
+        "posts": posts,
+        "follows": follows,
+        "likes": likes,
+        "comments": comments,
+        "saved_posts": saved_posts
+    }
+
+def save_social_data(data):
+    """Save social data to database"""
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Clear existing data
+    c.execute("DELETE FROM posts")
+    c.execute("DELETE FROM follows")
+    c.execute("DELETE FROM likes")
+    c.execute("DELETE FROM comments")
+    c.execute("DELETE FROM saved_posts")
+    
+    # Save posts
+    for post in data['posts']:
+        c.execute("""
+            INSERT INTO posts (id, username, content, image_paths, outfit_id, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            post['id'],
+            post['username'],
+            post['content'],
+            json.dumps(post['image_paths']),
+            post.get('outfit_id'),
+            post['timestamp']
+        ))
+    
+    # Save follows
+    for follower, following_list in data['follows'].items():
+        for following in following_list:
+            c.execute("""
+                INSERT INTO follows (follower, following, timestamp)
+                VALUES (?, ?, ?)
+            """, (follower, following, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    # Save likes
+    for post_id, users in data['likes'].items():
+        for username in users:
+            c.execute("""
+                INSERT INTO likes (username, post_id, timestamp)
+                VALUES (?, ?, ?)
+            """, (username, post_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    # Save comments
+    for post_id, comment_list in data['comments'].items():
+        for comment in comment_list:
+            c.execute("""
+                INSERT INTO comments (id, post_id, username, content, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                comment['id'],
+                comment['post_id'],
+                comment['username'],
+                comment['content'],
+                comment['timestamp']
+            ))
+    
+    # Save saved posts
+    for username, post_ids in data['saved_posts'].items():
+        for post_id in post_ids:
+            c.execute("""
+                INSERT INTO saved_posts (username, post_id, timestamp)
+                VALUES (?, ?, ?)
+            """, (username, post_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    
+    conn.commit()
+    conn.close()
 
 def main():
     """Main function to run the Streamlit app"""
