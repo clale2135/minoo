@@ -3956,30 +3956,6 @@ def get_style_recommendations(primary, secondary):
     }
     return recommendations
 
-# Comment out the store recommendations function for now
-"""
-def get_store_recommendations(primary, secondary):
-    # This would be a more sophisticated recommendation engine in production
-    store_map = {
-        "Classic": ["J.Crew", "Banana Republic", "Brooks Brothers"],
-        "Minimalist": ["COS", "Everlane", "Uniqlo"],
-        "Creative": ["Anthropologie", "Free People", "Urban Outfitters"],
-        "Romantic": ["& Other Stories", "Reformation", "Aritzia"],
-        "Natural": ["Madewell", "Patagonia", "Eileen Fisher"],
-        "Dramatic": ["Zara", "All Saints", "Diesel"],
-        "Trendy": ["H&M", "ASOS", "Topshop"],
-        "Elegant": ["Theory", "Club Monaco", "Reiss"]
-    }
-    
-    primary_stores = store_map.get(primary, ["Nordstrom"])
-    secondary_stores = store_map.get(secondary, ["Macy's"])
-    
-    # Combine and select a subset of stores
-    combined = primary_stores + [s for s in secondary_stores if s not in primary_stores]
-    return ", ".join(combined[:3])
-"""
-
-# Main function
 def main():
     """Main function to run the Streamlit app"""
     # Initialize session state for style quiz if not exists
