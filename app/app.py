@@ -3969,18 +3969,39 @@ def main():
     if "username" not in st.session_state:
         st.session_state.username = None
 
-    # Sidebar navigation
-    page = st.sidebar.selectbox(
-        "Choose a page",
-        ["Home", "Login/Register", "Image Uploader and Display", "Saved Clothes", 
-         "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-         "Shopping Recommendations", "Trading Marketplace"]
-    )
-    
+    # Get the page from URL parameter or sidebar
+    params = st.query_params
+    current_page = params.get("page", "Home")
+
+    # Show different navigation options based on login status
+    if st.session_state.logged_in:
+        page = st.sidebar.selectbox(
+            "Choose a page",
+            ["Home", "Image Uploader and Display", "Saved Clothes", 
+             "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+             "Shopping Recommendations", "Trading Marketplace"],
+            index=["Home", "Image Uploader and Display", "Saved Clothes", 
+                  "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+                  "Shopping Recommendations", "Trading Marketplace"].index(current_page)
+                  if current_page in ["Home", "Image Uploader and Display", "Saved Clothes", 
+                                    "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+                                    "Shopping Recommendations", "Trading Marketplace"] else 0
+        )
+    else:
+        # For non-logged in users, show Home and Login/Register
+        page = st.sidebar.selectbox(
+            "Choose a page",
+            ["Home", "Login/Register"],
+            index=0 if current_page not in ["Home", "login", "create_account"] else 
+                 (1 if current_page in ["login", "create_account"] else 0)
+        )
+        if page == "Login/Register":
+            page = "login"  # Default to login page when Login/Register is selected
+
     # Display the selected page
     if page == "Home":
         show_landing_page()
-    elif page == "Login/Register":
+    elif page in ["login", "create_account", "Login/Register"]:
         if not st.session_state.logged_in:
             tab1, tab2 = st.tabs(["Login", "Create Account"])
             with tab1:
@@ -3989,28 +4010,34 @@ def main():
                 create_account()
         else:
             st.title(f"Welcome back, {st.session_state.username}!")
-    elif page == "Image Uploader and Display":
-        image_uploader_and_display()
-    elif page == "Saved Clothes":
-        display_saved_clothes()
-    elif page == "Saved Outfits":
-        display_saved_outfits()
-    elif page == "Outfit Calendar":
-        schedule_outfits()
-    elif page == "Style Quizzes":
-        style_quizzes()
-    elif page == "Shopping Recommendations":
-        shopping_recommendations()
-    elif page == "Trading Marketplace":
+            show_landing_page()
+    else:
+        # All other pages require authentication
         if not st.session_state.logged_in:
-            st.warning("Please log in to access the Trading Marketplace.")
-            login()
+            st.warning("Please log in to access this feature.")
+            tab1, tab2 = st.tabs(["Login", "Create Account"])
+            with tab1:
+                login()
+            with tab2:
+                create_account()
         else:
-            trading_marketplace()
+            if page == "Image Uploader and Display":
+                image_uploader_and_display()
+            elif page == "Saved Clothes":
+                display_saved_clothes()
+            elif page == "Saved Outfits":
+                display_saved_outfits()
+            elif page == "Outfit Calendar":
+                schedule_outfits()
+            elif page == "Style Quizzes":
+                style_quizzes()
+            elif page == "Shopping Recommendations":
+                shopping_recommendations()
+            elif page == "Trading Marketplace":
+                trading_marketplace()
 
-    # In your main app flow, after authentication
-    if "logged_in" in st.session_state and st.session_state.logged_in:
-        # Add this line to your existing sidebar content
+    # Add social features for logged in users
+    if st.session_state.logged_in:
         st.sidebar.markdown("---")  # Adds a separator line
         add_social_features()  # Adds the social features section
 
