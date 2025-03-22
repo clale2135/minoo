@@ -16,6 +16,7 @@ import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
 import io
+import base64  # Add this at the top with other imports
 try:
     import pyperclip
 except ImportError:
@@ -40,847 +41,202 @@ st.set_page_config(
 def set_custom_style():
    st.markdown("""
        <style>
-       /* Luxury color scheme */
-       :root {
-           --primary-color: #B8860B;      /* Dark Golden */
-           --primary-hover: #DAA520;      /* Golden */
-           --background: #FDFBF7;         /* Cream White */
-           --text-color: #000000;         /* Pure Black */
-           --border-color: #D4C4B7;       /* Warm Gray */
-           --accent-color: #4A4039;       /* Rich Brown */
-           --gold-gradient: linear-gradient(135deg, #B8860B 0%, #DAA520 100%);
+       /* Add Cooper BT font */
+       @font-face {
+           font-family: 'Cooper BT';
+           src: url('https://db.onlinewebfonts.com/t/05554c33c36c4a1f3a523c1f4bd1637e.woff2') format('woff2'),
+                url('https://db.onlinewebfonts.com/t/05554c33c36c4a1f3a523c1f4bd1637e.woff') format('woff');
+           font-weight: normal;
+           font-style: normal;
        }
-
+       
+       /* Add Cooper Hewitt font */
+       @font-face {
+           font-family: 'Cooper Hewitt';
+           src: url('https://db.onlinewebfonts.com/t/c5d7c42f5fab7d4d7c0ee7c3e063c080.woff2') format('woff2'),
+                url('https://db.onlinewebfonts.com/t/c5d7c42f5fab7d4d7c0ee7c3e063c080.woff') format('woff');
+           font-weight: normal;
+           font-style: normal;
+       }
+       
+       /* Dark forest green theme with bubbly white text */
+       :root {
+           --primary-color: #293b22;      /* Emerald Green */
+           --primary-hover: #3a5230;      /* Lighter Emerald Green */
+           --background: #1A2918;         /* Darker Emerald Green */
+           --text-color: #FFFFFF;         /* White */
+           --border-color: #293b22;       /* Emerald Green */
+           --accent-color: #4a6940;       /* Light Emerald Green */
+           --green-gradient: linear-gradient(135deg, #293b22 0%, #3a5230 100%);
+       }
 
        /* Main container styling */
        .stApp {
            background-color: var(--background);
            background-image:
-               linear-gradient(rgba(253, 251, 247, 0.97), rgba(253, 251, 247, 0.97)),
-               url('https://subtle-patterns.com/patterns/white-leather.png');
+               linear-gradient(rgba(26, 41, 24, 0.97), rgba(26, 41, 24, 0.97)),
+               url('https://subtle-patterns.com/patterns/green-fibers.png');
        }
       
-       .main {
-           max-width: 1400px;
-           margin: 0 auto;
-           padding: 3rem;
-       }
-      
-       /* Header styling */
+       /* Header styling with bubbly text effect */
        .stTitle {
            color: var(--text-color);
-           font-family: 'Playfair Display', Georgia, serif;
-           font-weight: 600;
+           font-family: 'Quicksand', 'Nunito', sans-serif;
+           font-weight: 700;
            padding-bottom: 2rem;
            border-bottom: 2px solid var(--border-color);
            margin-bottom: 2rem;
            letter-spacing: 0.5px;
+           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
        }
       
        /* Button styling */
        .stButton > button {
-           background: var(--gold-gradient);
+           background: var(--green-gradient);
            color: white;
-           border-radius: 4px;
+           border-radius: 20px;
            padding: 0.8rem 1.5rem;
            border: none;
-           font-weight: 500;
+           font-weight: 600;
            letter-spacing: 0.5px;
            text-transform: uppercase;
            font-size: 0.9rem;
            transition: all 0.3s ease;
-           box-shadow: 0 2px 4px rgba(184, 134, 11, 0.1);
+           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
        }
       
        .stButton > button:hover {
            transform: translateY(-2px);
-           box-shadow: 0 4px 12px rgba(184, 134, 11, 0.2);
+           box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
            background: var(--primary-hover);
        }
       
-       /* Sidebar styling with black background */
+       /* Sidebar styling with darker background */
        .css-1d391kg, [data-testid="stSidebar"] {
-           background-color: #000000 !important;
+           background-color: #141f12 !important;
            border-right: 1px solid var(--border-color);
-           box-shadow: 2px 0 20px rgba(0, 0, 0, 0.05);
+           box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
        }
-      
-       /* Sidebar text color including dropdown */
-       [data-testid="stSidebar"] .stMarkdown,
-       [data-testid="stSidebar"] .stSelectbox,
-       [data-testid="stSidebar"] label,
-       [data-testid="stSidebar"] div,
-       [data-testid="stSidebar"] p,
-       [data-testid="stSidebar"] span,
-       [data-testid="stSidebar"] .stSelectbox > div,
-       [data-testid="stSidebar"] select,
-       [data-testid="stSidebar"] option {
-           color: white !important;
+       
+       /* All text elements in white */
+       div, span, label, .stMarkdown, p, h1, h2, h3, .stTitle, .welcome-msg {
+           color: var(--text-color) !important;
        }
-
-
-       /* Dropdown specific styling */
-       [data-testid="stSidebar"] .stSelectbox > div > div {
-           background-color: transparent !important;
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox > div > div > div {
-           background-color: transparent !important;
-           color: white !important;
-       }
-
-
-       /* Dropdown arrow color */
-       [data-testid="stSidebar"] .stSelectbox svg {
-           color: white !important;
-       }
-
-
-       /* Dropdown options when expanded */
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
-           background-color: black !important;
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] ul {
-           background-color: black !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] li {
-           color: white !important;
-       }
-
-
-       /* Hover state for dropdown options */
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] li:hover {
-           background-color: rgba(255, 255, 255, 0.1) !important;
-       }
-
-
-       /* Sidebar button styling */
-       [data-testid="stSidebar"] .stButton > button {
-           background: rgba(255, 255, 255, 0.1);
-           border: 1px solid rgba(255, 255, 255, 0.2);
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stButton > button:hover {
-           background: rgba(255, 255, 255, 0.2);
-       }
-
-
-       /* Ensure all text elements in sidebar are white */
-       [data-testid="stSidebar"] * {
-           color: white !important;
-       }
-
-
-       /* Card-like containers for clothes */
+       
+       /* Card-like containers for clothes with forest theme */
        .clothes-card {
-           background-color: white;
-           border-radius: 8px;
+           background-color: rgba(255, 255, 255, 0.1);
+           border-radius: 15px;
            padding: 2rem;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
            margin-bottom: 2rem;
-           border: 1px solid rgba(212, 196, 183, 0.3);
+           border: 1px solid rgba(41, 59, 34, 0.3);
            transition: all 0.3s ease;
+           backdrop-filter: blur(5px);
        }
       
        .clothes-card:hover {
            transform: translateY(-3px);
-           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+           border-color: var(--primary-color);
        }
-      
-       /* Image styling */
-       .stImage {
-           border-radius: 8px;
-           overflow: hidden;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+       
+       /* App title - GreenDrobe with Cooper BT font */
+       .app-title {
+           font-family: 'Cooper BT', 'Cooper Black', 'Georgia', serif;
+           font-size: 3.5rem;
+           font-weight: 800;
+           color: white !important;
+           text-align: center;
+           margin: 1.5rem 0;
+           text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+           letter-spacing: 1px;
        }
-      
+       
+       /* Tagline styling with Cooper Hewitt font */
+       .app-tagline {
+           font-family: 'Cooper Hewitt', 'Helvetica Neue', sans-serif;
+           font-size: 1.5rem;
+           font-weight: 300;
+           color: white !important;
+           text-align: center;
+           margin-bottom: 2rem;
+           letter-spacing: 1px;
+       }
+       
+       /* Welcome message styling */
+       .welcome-msg {
+           color: var(--text-color);
+           text-align: center;
+           padding: 2rem 0;
+           margin-bottom: 2rem;
+           font-size: 1.2rem;
+           line-height: 1.8;
+           font-family: 'Quicksand', 'Nunito', sans-serif;
+           border-bottom: 1px solid var(--border-color);
+           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+       }
+       
        /* Input field styling */
        .stTextInput > div > div > input {
-           border-radius: 4px;
+           border-radius: 10px;
            border: 1px solid var(--border-color);
            padding: 0.8rem 1rem;
-           background-color: rgba(255, 255, 255, 0.8);
+           background-color: rgba(255, 255, 255, 0.1);
+           color: white !important;
            transition: all 0.2s ease;
        }
       
        .stTextInput > div > div > input:focus {
            border-color: var(--primary-color);
-           box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.1);
-           background-color: white;
+           box-shadow: 0 0 0 2px rgba(41, 59, 34, 0.2);
+           background-color: rgba(255, 255, 255, 0.15);
        }
-      
-       /* Multiselect styling */
-       .stMultiSelect > div > div > div {
-           border-radius: 4px;
-           border: 1px solid var(--border-color);
-           background-color: rgba(255, 255, 255, 0.8);
-       }
-      
-       /* Success message styling */
-       .stSuccess {
-           background-color: #E8F3E8;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #285E28;
-           margin: 1rem 0;
-       }
-      
-       /* Error message styling */
-       .stError {
-           background-color: #FBE9E7;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #C62828;
-           margin: 1rem 0;
-       }
-
-
-       /* Remove default backgrounds */
-       .element-container {
-           background-color: transparent !important;
-       }
-      
-       .stDataFrame {
-           background-color: transparent !important;
-       }
-
-
-       /* Welcome message styling */
-       .welcome-msg {
-           color: var(--text-color);
-           text-align: center;
-           padding: 3rem 0;
-           margin-bottom: 3rem;
-           font-size: 1.3rem;
-           line-height: 1.8;
-           font-family: 'Playfair Display', Georgia, serif;
-           border-bottom: 1px solid var(--border-color);
-       }
-
-
-       /* Container styling */
-       .st-emotion-cache-1y4p8pa {
-           max-width: 1400px;
-           padding: 3rem;
-       }
-
-
-       /* Form element spacing */
-       .stSelectbox, .stMultiSelect {
-           margin-bottom: 1.5rem;
-       }
-
-
-       /* Custom heading styles */
-       h1, h2, h3 {
-           font-family: 'Playfair Display', Georgia, serif;
-           color: var(--text-color);
-           letter-spacing: 0.5px;
-       }
-
-
+       
        /* Selectbox styling */
        .stSelectbox > div > div > div {
-           background-color: white;
+           background-color: rgba(255, 255, 255, 0.1);
            border: 1px solid var(--border-color);
-           border-radius: 4px;
-           padding: 0.5rem;
+           border-radius: 10px;
+           color: white !important;
        }
-
-
-       /* Table styling */
-       .dataframe {
+       
+       /* Multiselect styling */
+       .stMultiSelect > div > div > div {
+           border-radius: 10px;
            border: 1px solid var(--border-color);
-           border-radius: 8px;
-           overflow: hidden;
-           background: white;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-       }
-
-
-       .dataframe th {
-           background-color: #F8F5F1;
-           color: var(--text-color);
-           font-weight: 600;
-           padding: 1rem;
-           border-bottom: 2px solid var(--border-color);
-       }
-
-
-       .dataframe td {
-           padding: 0.8rem 1rem;
-           border-bottom: 1px solid var(--border-color);
-       }
-
-
-       /* Add decorative elements */
-       .stTitle::before {
-           content: "✦";
-           color: var(--primary-color);
-           margin-right: 1rem;
-           font-size: 1.2em;
-       }
-
-
-       .stTitle::after {
-           content: "✦";
-           color: var(--primary-color);
-           margin-left: 1rem;
-           font-size: 1.2em;
-       }
-
-
-       /* Sidebar header */
-       .sidebar .sidebar-content {
-           background-color: #FFFFFF;
-           padding: 2rem 1rem;
-       }
-
-
-       /* Toast styling */
-       .stToast {
-           background-color: white !important;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-           border: 1px solid var(--border-color) !important;
-           border-radius: 8px !important;
-           padding: 1rem !important;
-       }
-
-
-       /* Update text colors in specific elements */
-       .stTitle, h1, h2, h3, p, .welcome-msg, .stTextInput > div > div > input {
-           color: #000000 !important;
-       }
-
-
-       /* Table text color */
-       .dataframe th, .dataframe td {
-           color: #000000 !important;
-       }
-
-
-       /* Success and error messages remain colored for visibility */
-       .stSuccess {
-           background-color: #E8F3E8;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #285E28;
-           margin: 1rem 0;
-       }
-      
-       .stError {
-           background-color: #FBE9E7;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #C62828;
-           margin: 1rem 0;
-       }
-
-
-       /* Ensure all regular text is black */
-       div, span, label, .stMarkdown {
-           color: #000000 !important;
-       }
-
-
-       /* Keep button text white for contrast */
-       .stButton > button {
+           background-color: rgba(255, 255, 255, 0.1);
            color: white !important;
        }
-
-
-       /* Comprehensive sidebar and dropdown styling */
-       [data-testid="stSidebar"] {
-           background-color: #000000;
-       }
-
-
-       /* Target all text elements in sidebar */
-       [data-testid="stSidebar"] * {
-           color: white !important;
-       }
-
-
-       /* Specific dropdown styling */
-       [data-testid="stSidebar"] [data-baseweb="select"] {
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] [data-baseweb="select"] * {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       /* Dropdown menu items */
-       [data-baseweb="popover"] * {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       [data-baseweb="select"] [role="listbox"] {
-           background-color: black !important;
-       }
-
-
-       [data-baseweb="select"] [role="option"] {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       /* Hover state for dropdown options */
-       [data-baseweb="select"] [role="option"]:hover {
-           background-color: #333333 !important;
-       }
-
-
-       /* Selected option in dropdown */
+       
+       /* Selected tags in multiselect */
        [data-baseweb="tag"] {
-           background-color: #333333 !important;
-           color: white !important;
+           background-color: var(--primary-color) !important;
+           border: none !important;
        }
-
-
-       /* Multiselect tag styling for both sidebar and main content */
-       [data-baseweb="tag"] {
-           background-color: #333333 !important;
-           border: 1px solid rgba(255, 255, 255, 0.2) !important;
-       }
-
-
+       
        [data-baseweb="tag"] span {
            color: white !important;
        }
-
-
-       /* Close button (x) in the tag */
-       [data-baseweb="tag"] button {
-           color: white !important;
-       }
-
-
-       /* Hover state for the close button */
-       [data-baseweb="tag"] button:hover {
-           background-color: rgba(255, 255, 255, 0.1) !important;
-       }
-
-
-       /* Make sure the text inside multiselect is visible */
-       .stMultiSelect div[role="button"] span {
-           color: black !important;
-       }
-
-
-       /* Selected tags in multiselect */
-       .stMultiSelect [data-baseweb="tag"] {
-           background-color: #333333 !important;
-       }
-
-
-       .stMultiSelect [data-baseweb="tag"] span {
-           color: white !important;
-       }
-
-
+       
        /* Dropdown items */
-       .stMultiSelect [role="listbox"] div {
-           color: black !important;
+       [data-baseweb="select"] [role="listbox"],
+       [data-baseweb="select"] [role="option"] {
+           background-color: #1A2918 !important;
+           color: white !important;
        }
-
-
-       /* Mobile-first CSS with media queries */
-       @media (max-width: 768px) {
-           .stApp {
-               background-image: none;
-           }
-          
-           .main {
-               padding: 2rem;
-           }
-          
-           .stTitle {
-               font-size: 1.5rem;
-               padding-bottom: 1rem;
-               margin-bottom: 1rem;
-           }
-          
-           .stButton > button {
-               padding: 0.6rem 1rem;
-               font-size: 0.8rem;
-           }
-          
-           .clothes-card {
-               padding: 1rem;
-           }
-          
-           .stImage {
-               border-radius: 4px;
-           }
-          
-           .stTextInput > div > div > input {
-               padding: 0.6rem 0.8rem;
-           }
-          
-           .stMultiSelect > div > div > div {
-               padding: 0.6rem 0.8rem;
-           }
-          
-           .stSuccess, .stError {
-               padding: 0.8rem;
-               border-radius: 3px;
-               border-left-width: 3px;
-           }
-          
-           .welcome-msg {
-               padding: 2rem 0;
-               margin-bottom: 2rem;
-               font-size: 1.2rem;
-               line-height: 1.6;
-           }
-          
-           .st-emotion-cache-1y4p8pa {
-               padding: 2rem;
-           }
-          
-           .stSelectbox, .stMultiSelect {
-               margin-bottom: 1rem;
-           }
-          
-           .stSelectbox > div > div > div {
-               padding: 0.4rem;
-           }
-          
-           .dataframe th {
-               padding: 0.8rem;
-           }
-          
-           .dataframe td {
-               padding: 0.6rem;
-           }
-          
-           .stTitle::before, .stTitle::after {
-               font-size: 1em;
-           }
-          
-           .sidebar .sidebar-content {
-               padding: 1rem;
-           }
-          
-           .stToast {
-               padding: 0.8rem !important;
-           }
-          
-           [data-testid="stSidebar"] .stSelectbox > div > div {
-               font-size: 0.8rem;
-           }
-          
-           [data-baseweb="select"] [role="option"] {
-               font-size: 0.8rem;
-           }
-          
-           [data-baseweb="tag"] {
-               font-size: 0.8rem;
-           }
-          
-           .stMultiSelect div[role="button"] span {
-               font-size: 0.8rem;
-           }
-          
-           .stMultiSelect [role="listbox"] div {
-               font-size: 0.8rem;
-           }
+       
+       /* Hover state for dropdown options */
+       [data-baseweb="select"] [role="option"]:hover {
+           background-color: #293b22 !important;
        }
-
-
-       /* Simplified tab navigation with emoji-only labels on mobile */
-       @media (max-width: 768px) {
-           .stTabs [data-baseweb="tab-list"] {
-               display: flex;
-               flex-direction: row;
-               justify-content: space-around;
-               align-items: center;
-               padding: 0;
-               margin-bottom: 1rem;
-           }
-          
-           .stTabs [data-baseweb="tab"] {
-               flex: 1;
-               text-align: center;
-               padding: 0.5rem;
-               border-radius: 4px;
-               background-color: rgba(255, 255, 255, 0.1);
-               color: white;
-               font-size: 1.2rem;
-               font-weight: bold;
-               transition: background-color 0.2s ease;
-           }
-          
-           .stTabs [data-baseweb="tab"]:hover {
-               background-color: rgba(255, 255, 255, 0.2);
-           }
-          
-           .stTabs [data-baseweb="tab"][aria-selected="true"] {
-               background-color: var(--primary-color);
-           }
-          
-           .stTabs [data-baseweb="tab-highlight"] {
-               display: none;
-           }
-       }
-
-
-       /* Optimized spacing and padding for smaller screens */
-       @media (max-width: 768px) {
-           .main {
-               padding: 1rem;
-           }
-          
-           .stTitle {
-               padding-bottom: 0.5rem;
-               margin-bottom: 0.5rem;
-           }
-          
-           .stButton > button {
-               padding: 0.4rem 0.8rem;
-               font-size: 0.7rem;
-           }
-          
-           .clothes-card {
-               padding: 0.5rem;
-           }
-          
-           .stImage {
-               border-radius: 3px;
-           }
-          
-           .stTextInput > div > div > input {
-               padding: 0.4rem 0.6rem;
-           }
-          
-           .stMultiSelect > div > div > div {
-               padding: 0.4rem 0.6rem;
-           }
-          
-           .stSuccess, .stError {
-               padding: 0.6rem;
-               border-radius: 2px;
-               border-left-width: 2px;
-           }
-          
-           .welcome-msg {
-               padding: 1rem 0;
-               margin-bottom: 1rem;
-               font-size: 1rem;
-               line-height: 1.4;
-           }
-          
-           .st-emotion-cache-1y4p8pa {
-               padding: 1rem;
-           }
-          
-           .stSelectbox, .stMultiSelect {
-               margin-bottom: 0.5rem;
-           }
-          
-           .stSelectbox > div > div > div {
-               padding: 0.3rem;
-           }
-          
-           .dataframe th {
-               padding: 0.6rem;
-           }
-          
-           .dataframe td {
-               padding: 0.4rem;
-           }
-          
-           .stTitle::before, .stTitle::after {
-               font-size: 0.8em;
-           }
-          
-           .sidebar .sidebar-content {
-               padding: 0.5rem;
-           }
-          
-           .stToast {
-               padding: 0.6rem !important;
-           }
-          
-           [data-testid="stSidebar"] .stSelectbox > div > div {
-               font-size: 0.7rem;
-           }
-          
-           [data-baseweb="select"] [role="option"] {
-               font-size: 0.7rem;
-           }
-          
-           [data-baseweb="tag"] {
-               font-size: 0.7rem;
-           }
-          
-           .stMultiSelect div[role="button"] span {
-               font-size: 0.7rem;
-           }
-          
-           .stMultiSelect [role="listbox"] div {
-               font-size: 0.7rem;
-           }
-       }
-
-
-       /* Reduced text length in questions and options */
-       @media (max-width: 768px) {
-           .stTabs [data-baseweb="tab"] {
-               font-size: 1rem;
-           }
-          
-           .stSelectbox > div > div > div,
-           [data-baseweb="select"] [role="option"],
-           [data-baseweb="tag"],
-           .stMultiSelect div[role="button"] span,
-           .stMultiSelect [role="listbox"] div {
-               font-size: 0.8rem;
-           }
-       }
-
-
-       /* Made buttons and interactive elements touch-friendly */
-       @media (max-width: 768px) {
-           .stButton > button {
-               padding: 0.6rem 1rem;
-               font-size: 0.9rem;
-           }
-          
-           .stTabs [data-baseweb="tab"] {
-               padding: 0.8rem;
-           }
-          
-           .stSelectbox > div > div > div,
-           [data-baseweb="select"] [role="option"],
-           [data-baseweb="tag"],
-           .stMultiSelect div[role="button"] span,
-           .stMultiSelect [role="listbox"] div {
-               padding: 0.6rem 0.8rem;
-           }
-       }
-
-
-       /* Added responsive text sizing */
-       @media (max-width: 768px) {
-           .stTitle {
-               font-size: 1.5rem;
-           }
-          
-           h1, h2, h3 {
-               font-size: 1.2rem;
-           }
-          
-           .welcome-msg {
-               font-size: 1.2rem;
-           }
-          
-           .stTextInput > div > div > input {
-               font-size: 1rem;
-           }
-          
-           .stSelectbox > div > div > div,
-           [data-baseweb="select"] [role="option"],
-           [data-baseweb="tag"],
-           .stMultiSelect div[role="button"] span,
-           .stMultiSelect [role="listbox"] div {
-               font-size: 0.9rem;
-           }
-          
-           .stButton > button {
-               font-size: 0.9rem;
-           }
-       }
-
-
-       /* Improved form layout and spacing */
-       @media (max-width: 768px) {
-           .stForm {
-               display: flex;
-               flex-direction: column;
-               align-items: center;
-           }
-          
-           .stForm > div {
-               width: 100%;
-               margin-bottom: 1rem;
-           }
-          
-           .stForm > div:last-child {
-               margin-bottom: 0;
-           }
-       }
-
-
-       /* Enhanced progress bar visibility */
-       @media (max-width: 768px) {
-           .stProgress {
-               margin-bottom: 1rem;
-           }
-       }
-
-
-       /* Optimized multiselect and radio button styling */
-       @media (max-width: 768px) {
-           .stMultiSelect > div > div > div {
-               padding: 0.6rem 0.8rem;
-           }
-          
-           .stRadio > div {
-               display: flex;
-               flex-direction: column;
-               align-items: flex-start;
-           }
-          
-           .stRadio > div > label {
-               margin-bottom: 0.2rem;
-           }
-       }
-
-
-       /* Added container classes for better spacing */
-       .container {
-           max-width: 800px;
-           margin: 0 auto;
-           padding: 2rem;
-       }
-      
-       .container-narrow {
-           max-width: 600px;
-           margin: 0 auto;
-           padding: 2rem;
-       }
-
-
-       /* Adjusted padding for smaller screens */
-       @media (max-width: 768px) {
-           .container, .container-narrow {
-               padding: 1rem;
-           }
-       }
-
-
+       
+       /* Keep the rest of your existing styles but update colors as needed */
+       // ... existing code ...
        </style>
+       
+       <!-- Add GreenDrobe title at the top -->
+       <div class="app-title">GreenDrobe</div>
    """, unsafe_allow_html=True)
 
 
@@ -2945,7 +2301,8 @@ def change_page(page_name: str):
 
 def homepage():
     """Display the homepage with outfit challenges and features"""
-    st.title("🏠 Welcome to Your Digital Wardrobe")
+    # Replace the title with a styled tagline
+    st.markdown('<div class="app-tagline">Effortless Looks, Every Day.</div>', unsafe_allow_html=True)
     
     # User's Style Profile Summary
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -2956,22 +2313,6 @@ def homepage():
             Your Style: **{get_user_style()}**
         """)
     
-    with col2:
-        if st.button("📊 View My Stats", key="view_stats_button"):
-            st.session_state.show_stats = not st.session_state.get('show_stats', False)
-    
-    with col3:
-        if st.button("🎨 Retake Style Quiz"):
-            st.session_state.show_style_quiz = True
-            st.session_state.quiz_completed = False
-    
-    # Show stats if enabled
-    if st.session_state.get('show_stats', False):
-        show_wardrobe_stats()
-        if st.button("Close Stats", key="close_stats_button"):
-            st.session_state.show_stats = False
-    
-    # Outfit Challenges Section
     st.markdown("### 🏆 Outfit Challenges")
     
     if st.session_state.get('submitting_challenge', False):
@@ -6021,8 +5362,206 @@ def can_delete_comment(comment):
     """Check if current user can delete a comment"""
     return comment["user_id"] == st.session_state.username
 
+def create_instagram_style_post(outfit, username):
+    """Create an Instagram-style post layout for an outfit"""
+    try:
+        # Create a styled container for the post
+        st.markdown("""
+            <style>
+            .instagram-post {
+                background: white;
+                border: 1px solid #dbdbdb;
+                border-radius: 3px;
+                margin-bottom: 20px;
+                max-width: 400px;  /* Reduced from 600px */
+                margin: 0 auto;
+            }
+            
+            .post-header {
+                padding: 8px;  /* Reduced from 12px */
+                display: flex;
+                align-items: center;
+                border-bottom: 1px solid #efefef;
+            }
+            
+            .post-header img {
+                border-radius: 50%;
+                margin-right: 8px;  /* Reduced from 10px */
+                width: 24px;  /* Reduced from 32px */
+                height: 24px;  /* Reduced from 32px */
+            }
+            
+            .username {
+                font-weight: 600;
+                color: #262626;
+                text-decoration: none;
+                font-size: 0.9em;  /* Added smaller font size */
+            }
+            
+            .post-content {
+                width: 100%;
+                background: #fafafa;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .outfit-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);  /* Changed to 2 columns */
+                gap: 2px;  /* Reduced from 4px */
+                padding: 2px;  /* Reduced from 4px */
+                background: white;
+            }
+            
+            .outfit-item {
+                aspect-ratio: 1;
+                object-fit: cover;
+                width: 100%;
+                max-width: 150px;  /* Added max-width */
+                height: auto;
+            }
+            
+            .post-actions {
+                padding: 8px;  /* Reduced from 12px */
+                border-top: 1px solid #efefef;
+            }
+            
+            .post-likes {
+                font-weight: 600;
+                margin-bottom: 4px;  /* Reduced from 8px */
+                font-size: 0.9em;
+            }
+            
+            .post-caption {
+                margin-bottom: 4px;  /* Reduced from 8px */
+                font-size: 0.9em;
+            }
+            
+            .post-comments {
+                color: #8e8e8e;
+                font-size: 0.8em;
+            }
+            
+            .post-time {
+                color: #8e8e8e;
+                font-size: 0.7em;
+                text-transform: uppercase;
+            }
+            
+            .action-button {
+                background: none;
+                border: none;
+                padding: 4px;  /* Reduced from 8px */
+                cursor: pointer;
+                color: #262626;
+                font-size: 1em;  /* Reduced from 1.2em */
+            }
+            
+            .post-engagement {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 8px;  /* Reduced from 12px */
+            }
+            
+            .hashtag {
+                color: #00376b;
+                text-decoration: none;
+                font-size: 0.8em;
+            }
+            
+            /* Added responsive design for small screens */
+            @media (max-width: 480px) {
+                .instagram-post {
+                    max-width: 100%;
+                }
+                
+                .outfit-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .outfit-item {
+                    max-width: 120px;
+                }
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Generate random engagement numbers
+        likes = np.random.randint(10, 1000)
+        comments = np.random.randint(1, 50)
+        
+        # Create hashtags (limited to 3 for more compact display)
+        hashtags = [
+            f"#{outfit['occasion'].replace(' ', '')}", 
+            "#OOTD",
+            "#StyleShare"
+        ]
+        
+        # Create the post HTML with smaller header image
+        post_html = f"""
+            <div class="instagram-post">
+                <div class="post-header">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={username}" width="24" height="24"/>
+                    <span class="username">@{username}</span>
+                </div>
+                
+                <div class="post-content">
+                    <div class="outfit-grid">
+        """
+        
+        # Add outfit images to grid (limit to 4 items for more compact display)
+        for item in outfit['items'][:4]:  # Limit to 4 items
+            if os.path.exists(item['image_path']):
+                try:
+                    with Image.open(item['image_path']) as img:
+                        # Resize image before converting to base64
+                        img.thumbnail((150, 150))  # Resize to smaller dimensions
+                        buffered = io.BytesIO()
+                        img.save(buffered, format="JPEG", quality=85)  # Reduced quality for smaller size
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        post_html += f"""
+                            <img class="outfit-item" src="data:image/jpeg;base64,{img_str}" 
+                                 alt="{item['name']}" title="{item['name']}"/>
+                        """
+                except Exception as img_error:
+                    st.warning(f"Could not process image for {item['name']}: {str(img_error)}")
+                    continue
+        
+        # Add post actions and caption (simplified)
+        post_html += f"""
+                </div>
+            </div>
+            <div class="post-actions">
+                <div class="post-engagement">
+                    <div>
+                        <button class="action-button">❤️</button>
+                        <button class="action-button">💬</button>
+                        <button class="action-button">📤</button>
+                    </div>
+                    <button class="action-button">🔖</button>
+                </div>
+                <div class="post-likes">{likes:,} likes</div>
+                <div class="post-caption">
+                    <span class="username">@{username}</span> 
+                    {outfit['name']}<br/>
+                    {' '.join(f'<a class="hashtag" href="#">{tag}</a>' for tag in hashtags)}
+                </div>
+                <div class="post-comments">View all {comments} comments</div>
+                <div class="post-time">{(datetime.now() - timedelta(minutes=np.random.randint(1, 60))).strftime('%B %d').upper()}</div>
+            </div>
+        </div>
+        """
+        
+        return st.markdown(post_html, unsafe_allow_html=True)
+    
+    except Exception as e:
+        st.error(f"Error creating Instagram-style post: {str(e)}")
+        return None
+
 def social_media_features():
-    """Handle social media sharing and integration"""
+    """Handle social media sharing and integration with Instagram-style posts"""
     st.title("📱 Social Media Integration")
     
     # Create tabs for different social features
@@ -6049,21 +5588,14 @@ def social_media_features():
                 outfit = next((o for o in saved_outfits if o['name'] == selected_outfit), None)
                 
                 if outfit:
-                    # Display outfit
-                    st.markdown("#### Preview")
-                    cols = st.columns(len(outfit['items']))
-                    for idx, item in enumerate(outfit['items']):
-                        with cols[idx]:
-                            if os.path.exists(item['image_path']):
-                                image = Image.open(item['image_path'])
-                                st.image(image, caption=item['name'], width=120)
+                    # Display Instagram-style post
+                    create_instagram_style_post(outfit, st.session_state.username)
                     
-                    # Generate sharing text
+                    # Share options
+                    st.markdown("#### Share Options")
+                    share_cols = st.columns(4)
+                    
                     share_text = f"Check out my {outfit['name']} outfit for {outfit['occasion']}! #StyleShare #Fashion"
-                    
-                    # Create sharing buttons
-                    st.markdown("#### Share on")
-                    share_cols = st.columns(3)
                     
                     with share_cols[0]:
                         if st.button("📸 Instagram"):
@@ -6080,15 +5612,9 @@ def social_media_features():
                             pinterest_url = f"https://pinterest.com/pin/create/button/?description={share_text}"
                             st.markdown(f"[Open Pinterest]({pinterest_url})")
                     
-                    # Copy sharing link
-                    st.markdown("#### Share via Link")
-                    share_link = f"https://yourapp.com/outfit/{outfit['id']}"  # Replace with actual sharing URL
-                    
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.text_input("Sharing Link", share_link, disabled=True)
-                    with col2:
-                        if st.button("📋 Copy"):
+                    with share_cols[3]:
+                        if st.button("📋 Copy Link"):
+                            share_link = f"https://yourapp.com/outfit/{outfit['id']}"
                             pyperclip.copy(share_link)
                             st.success("Link copied!")
             else:

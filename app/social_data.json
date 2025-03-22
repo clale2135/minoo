@@ -1,11 +1,56 @@
 {
-  "posts": [],
+  "posts": [
+    {
+      "id": "6304022a-7bd6-40a6-b5c9-283213de81ec",
+      "user_id": "f",
+      "content": "arfsd",
+      "image_paths": [
+        "uploads/social_371d68a9-4fc1-4bd3-b64b-f15f60e40f21_1A61D79E-D03D-488F-98CE-590E71A6944A.JPG",
+        "uploads/MBJ-WB829-Womens-Flirty-Flare-Skirt-XS-RED_8d7bf4a0-b28a-4e8c-b8cd-c46d758fb2a2_1.89c843c6ab7288932dacb929a23114b1.webp",
+        "uploads/M01T12-TN_Front.webp"
+      ],
+      "likes": 1,
+      "comments": [],
+      "created_at": "2025-03-09 19:31:44",
+      "outfit_id": "72e35552-3a0a-42bd-b3ec-eb870fd21c59"
+    },
+    {
+      "id": "fde0027a-9433-43e0-a7ae-00b05cea26c5",
+      "user_id": "f",
+      "content": "feelin fat",
+      "image_paths": [
+        "uploads/social_3f8efc84-b489-45aa-a298-fc3f2393af96_Screenshot 2025-03-07 at 11.47.30\u202fAM.png",
+        "uploads/MBJ-WB829-Womens-Flirty-Flare-Skirt-XS-RED_8d7bf4a0-b28a-4e8c-b8cd-c46d758fb2a2_1.89c843c6ab7288932dacb929a23114b1.webp",
+        "uploads/M01T12-TN_Front.webp"
+      ],
+      "likes": 1,
+      "comments": [],
+      "created_at": "2025-03-09 19:24:34",
+      "outfit_id": "72e35552-3a0a-42bd-b3ec-eb870fd21c59"
+    }
+  ],
   "follows": {
     "f": [
-      "aaa"
+      "aaa",
+      "jacob12345"
     ]
   },
-  "likes": {},
+  "likes": {
+    "f_fde0027a-9433-43e0-a7ae-00b05cea26c5": {
+      "timestamp": "2025-03-09 19:24:41",
+      "post_id": "fde0027a-9433-43e0-a7ae-00b05cea26c5",
+      "user_id": "f"
+    },
+    "f_6304022a-7bd6-40a6-b5c9-283213de81ec": {
+      "timestamp": "2025-03-21 21:03:14",
+      "post_id": "6304022a-7bd6-40a6-b5c9-283213de81ec",
+      "user_id": "f"
+    }
+  },
   "comments": {},
-  "saved_posts": {}
+  "saved_posts": {
+    "f": [
+      "fde0027a-9433-43e0-a7ae-00b05cea26c5"
+    ]
+  }
 }
