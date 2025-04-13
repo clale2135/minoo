@@ -20,6 +20,7 @@ from streamlit_drawable_canvas import st_canvas
 import io
 import functools
 from src.quizzes.quiz_handlers import style_quizzes
+import base64
 
 # Must be the first Streamlit command
 st.set_page_config(
@@ -1455,7 +1456,8 @@ def style_quiz():
     elif 'avatar_customized' not in st.session_state:
         customize_avatar_and_profile()
     else:
-        run_style_quiz()
+        # Call the style_quizzes function from quiz_handlers
+        style_quizzes()
 
 def generate_dicebear_avatar(avatar_preferences):
     """Generate avatar using DiceBear API"""
@@ -1660,7 +1662,7 @@ def customize_avatar_and_profile():
             }
             
             st.session_state.avatar_customized = True
-            st.session_state.show_style_quiz = True  # New flag to show quiz
+            st.session_state.show_style_quiz = True
             
             # Show success message
             st.success("Profile saved! Let's discover your style!")
@@ -1796,6 +1798,9 @@ def personal_attributes_quiz():
 
 def run_style_quiz():
     """Run the main style quiz with personal attributes context"""
+    # Call the imported style_quizzes function
+    style_quizzes()
+    
     # Add custom CSS for better mobile responsiveness
     st.markdown("""
         <style>
@@ -2650,7 +2655,7 @@ def analyze_face_shape(responses):
     """Analyze quiz responses to determine face shape"""
     prompt = f"""Based on these characteristics:
     Face length: {responses['face_length']}
-    Jaw shape: {responses['jaw_shape']}
+    Jaw shape: {responses['jaw_shape']} 
     Cheekbones: {responses['cheekbones']}
     
     Determine the person's face shape (Oval, Round, Square, Heart, Diamond, or Rectangle).
@@ -2762,7 +2767,6 @@ def show_body_type_results(body_type):
     st.markdown("### Styling Tips")
     st.markdown(tips.get(body_type, "No specific tips available for this body type."))
 
-# Fix 3: Add missing function for style personality quiz
 def style_personality_quiz():
     """Quiz to determine user's style personality"""
     st.markdown("### 👗 Style Personality Quiz")
@@ -3841,201 +3845,68 @@ def can_delete_comment(comment):
 
 def create_instagram_style_post(outfit, username):
     """Create an Instagram-style post layout for an outfit"""
-    try:
-        # Create a styled container for the post
-        st.markdown("""
-            <style>
-            .instagram-post {
-                background: white;
-                border: 1px solid #dbdbdb;
-                border-radius: 3px;
-                margin-bottom: 20px;
-                max-width: 400px;  /* Reduced from 600px */
-                margin: 0 auto;
-            }
-            
-            .post-header {
-                padding: 8px;  /* Reduced from 12px */
-                display: flex;
-                align-items: center;
-                border-bottom: 1px solid #efefef;
-            }
-            
-            .post-header img {
-                border-radius: 50%;
-                margin-right: 8px;  /* Reduced from 10px */
-                width: 24px;  /* Reduced from 32px */
-                height: 24px;  /* Reduced from 32px */
-            }
-            
-            .username {
-                font-weight: 600;
-                color: #262626;
-                text-decoration: none;
-                font-size: 0.9em;  /* Added smaller font size */
-            }
-            
-            .post-content {
-                width: 100%;
-                background: #fafafa;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            
-            .outfit-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);  /* Changed to 2 columns */
-                gap: 2px;  /* Reduced from 4px */
-                padding: 2px;  /* Reduced from 4px */
-                background: white;
-            }
-            
-            .outfit-item {
-                aspect-ratio: 1;
-                object-fit: cover;
-                width: 100%;
-                max-width: 150px;  /* Added max-width */
-                height: auto;
-            }
-            
-            .post-actions {
-                padding: 8px;  /* Reduced from 12px */
-                border-top: 1px solid #efefef;
-            }
-            
-            .post-likes {
-                font-weight: 600;
-                margin-bottom: 4px;  /* Reduced from 8px */
-                font-size: 0.9em;
-            }
-            
-            .post-caption {
-                margin-bottom: 4px;  /* Reduced from 8px */
-                font-size: 0.9em;
-            }
-            
-            .post-comments {
-                color: #8e8e8e;
-                font-size: 0.8em;
-            }
-            
-            .post-time {
-                color: #8e8e8e;
-                font-size: 0.7em;
-                text-transform: uppercase;
-            }
-            
-            .action-button {
-                background: none;
-                border: none;
-                padding: 4px;  /* Reduced from 8px */
-                cursor: pointer;
-                color: #262626;
-                font-size: 1em;  /* Reduced from 1.2em */
-            }
-            
-            .post-engagement {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0 8px;  /* Reduced from 12px */
-            }
-            
-            .hashtag {
-                color: #00376b;
-                text-decoration: none;
-                font-size: 0.8em;
-            }
-            
-            /* Added responsive design for small screens */
-            @media (max-width: 480px) {
-                .instagram-post {
-                    max-width: 100%;
-                }
-                
-                .outfit-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                
-                .outfit-item {
-                    max-width: 120px;
-                }
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        
-        # Generate random engagement numbers
-        likes = np.random.randint(10, 1000)
-        comments = np.random.randint(1, 50)
-        
-        # Create hashtags (limited to 3 for more compact display)
-        hashtags = [
-            f"#{outfit['occasion'].replace(' ', '')}", 
-            "#OOTD",
-            "#StyleShare"
-        ]
-        
-        # Create the post HTML with smaller header image
-        post_html = f"""
-            <div class="instagram-post">
-                <div class="post-header">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={username}" width="24" height="24"/>
-                    <span class="username">@{username}</span>
-                </div>
-                
-                <div class="post-content">
-                    <div class="outfit-grid">
-        """
-        
-        # Add outfit images to grid (limit to 4 items for more compact display)
-        for item in outfit['items'][:4]:  # Limit to 4 items
-            if os.path.exists(item['image_path']):
-                try:
-                    with Image.open(item['image_path']) as img:
-                        # Resize image before converting to base64
-                        img.thumbnail((150, 150))  # Resize to smaller dimensions
-                        buffered = io.BytesIO()
-                        img.save(buffered, format="JPEG", quality=85)  # Reduced quality for smaller size
-                        img_str = base64.b64encode(buffered.getvalue()).decode()
-                        post_html += f"""
-                            <img class="outfit-item" src="data:image/jpeg;base64,{img_str}" 
-                                 alt="{item['name']}" title="{item['name']}"/>
-                        """
-                except Exception as img_error:
-                    st.warning(f"Could not process image for {item['name']}: {str(img_error)}")
-                    continue
-        
-        # Add post actions and caption (simplified)
-        post_html += f"""
-                </div>
+    # Use DiceBear avatar
+    avatar_url = f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
+    
+    # Generate random engagement numbers
+    likes = np.random.randint(10, 1000)
+    comments = np.random.randint(1, 50)
+    
+    # Create hashtags (limited to 3 for more compact display)
+    hashtags = [
+        f"#{outfit['occasion'].replace(' ', '')}", 
+        "#OOTD",
+        "#StyleShare"
+    ]
+    
+    # Create the post HTML with smaller header image
+    post_html = f"""
+        <div class="instagram-post">
+            <div class="post-header">
+                <img src="{avatar_url}" width="24" height="24"/>
+                <span class="username">@{username}</span>
             </div>
-            <div class="post-actions">
+            
+            <div class="post-content">
+                <div class="outfit-grid">
+    """
+    
+    # Add outfit images to grid (limit to 4 items for more compact display)
+    for item in outfit['items'][:4]:  # Limit to 4 items
+        if os.path.exists(item['image_path']):
+            try:
+                with Image.open(item['image_path']) as img:
+                    # Resize image before converting to base64
+                    img.thumbnail((150, 150))  # Resize to smaller dimensions
+                    buffered = io.BytesIO()
+                    img.save(buffered, format="JPEG", quality=85)  # Reduced quality for smaller size
+                    img_str = base64.b64encode(buffered.getvalue()).decode()
+                    post_html += f"""
+                        <img class="outfit-item" src="data:image/jpeg;base64,{img_str}" 
+                             alt="{item['name']}" title="{item['name']}"/>
+                    """
+            except Exception as img_error:
+                st.warning(f"Could not process image for {item['name']}: {str(img_error)}")
+                continue
+    
+    # Close the grid and add engagement
+    post_html += f"""
+                </div>
                 <div class="post-engagement">
-                    <div>
-                        <button class="action-button">❤️</button>
-                        <button class="action-button">💬</button>
-                        <button class="action-button">📤</button>
-                    </div>
-                    <button class="action-button">🔖</button>
+                    <span class="likes">❤️ {likes} likes</span>
+                    <span class="comments">💬 {comments} comments</span>
                 </div>
-                <div class="post-likes">{likes:,} likes</div>
                 <div class="post-caption">
-                    <span class="username">@{username}</span> 
-                    {outfit['name']}<br/>
-                    {' '.join(f'<a class="hashtag" href="#">{tag}</a>' for tag in hashtags)}
+                    <strong>@{username}</strong> {outfit['styling_tips']}
                 </div>
-                <div class="post-comments">View all {comments} comments</div>
-                <div class="post-time">{(datetime.now() - timedelta(minutes=np.random.randint(1, 60))).strftime('%B %d').upper()}</div>
+                <div class="post-hashtags">
+                    {' '.join(hashtags)}
+                </div>
             </div>
         </div>
-        """
-        
-        return st.markdown(post_html, unsafe_allow_html=True)
+    """
     
-    except Exception as e:
-        st.error(f"Error creating Instagram-style post: {str(e)}")
-        return None
+    return post_html
 
 def social_media_features():
     """Handle social media sharing and integration with Instagram-style posts"""
@@ -4550,13 +4421,14 @@ def main():
         page = st.sidebar.selectbox(
             "Choose a page",
             ["Home", "Image Uploader and Display", "Saved Clothes", 
-             "Saved Outfits", "Outfit Calendar", "Style Quizzes", "Trading Marketplace"],
+             "Saved Outfits", "Outfit Calendar", "Style Quizzes", "Trading Marketplace",
+             "Social Feed", "My Profile", "Find Users"],
             index=["Home", "Image Uploader and Display", "Saved Clothes", 
                   "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                   "Trading Marketplace"].index(current_page)
+                  "Trading Marketplace", "Social Feed", "My Profile", "Find Users"].index(current_page)
                   if current_page in ["Home", "Image Uploader and Display", "Saved Clothes", 
                                     "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                                    "Trading Marketplace"] else 0
+                                    "Trading Marketplace", "Social Feed", "My Profile", "Find Users"] else 0
         )
     else:
         # For non-logged in users, show Home and Login/Register
@@ -4604,10 +4476,12 @@ def main():
                 style_quizzes()
             elif page == "Trading Marketplace":
                 trading_marketplace()
-
-    if st.session_state.logged_in:
-        st.sidebar.markdown("---") 
-        add_social_features() 
-
+            elif page == "Social Feed":
+                show_social_feed()
+            elif page == "My Profile":
+                show_user_profile()
+            elif page == "Find Users":
+                find_users()
+                
 if __name__ == "__main__":
     main()

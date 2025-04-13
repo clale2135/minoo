@@ -259,11 +259,11 @@ def show_color_swatch(hex_color, name):
             align-items: center;
             margin: 10px;
             padding: 10px;
-            background: white;
+            background: black;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             transition: all 0.3s ease;
-            border: 1px solid rgba(212,176,140,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
         ">
             <div class="color-swatch" style='
                 background-color: {hex_color}; 
@@ -271,19 +271,19 @@ def show_color_swatch(hex_color, name):
                 height: 80px; 
                 border-radius: 8px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                border: 1px solid rgba(0,0,0,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
             '></div>
             <div style='
                 margin-left: 15px;
                 font-family: "Playfair Display", serif;
             '>
                 <div style='
-                    color: #2C1810;
+                    color: white;
                     font-size: 1.1rem;
                     margin-bottom: 4px;
                 '>{name}</div>
                 <div style='
-                    color: #8B7355;
+                    color: rgba(255,255,255,0.8);
                     font-size: 0.9rem;
                     font-family: monospace;
                 '>{hex_color}</div>

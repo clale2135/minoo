@@ -3,6 +3,7 @@ from openai import OpenAI
 import json
 from datetime import datetime
 import os
+from src.quizzes.quiz_handlers import style_quizzes
 
 def analyze_color_season(responses):
     """Analyze quiz responses to determine color season"""
@@ -382,4 +383,11 @@ def show_tutorial():
     
     if st.button("Got it! Let's Start"):
         st.session_state.show_tutorial = False
-        st.rerun() 
+        st.rerun()
+
+def main():
+    """Main entry point for style quizzes"""
+    style_quizzes()
+
+if __name__ == "__main__":
+    main() 
