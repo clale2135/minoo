@@ -386,7 +386,7 @@ def set_custom_style():
    # Center the image by using columns
    col1, col2, col3 = st.columns([1, 2, 1])
    with col2:
-       st.image("../Greendrobe.png", width=500)
+       st.image("Greendrobe.png", width=500)
 
 
 
