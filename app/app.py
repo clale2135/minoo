@@ -40,7 +40,13 @@ except ImportError:
 # Load environment variables
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=api_key)
+
+# Initialize OpenAI client with error handling
+if api_key:
+    client = openai.OpenAI(api_key=api_key)
+else:
+    st.warning("⚠️ OpenAI API key not found. Some features may not work properly.")
+    client = None
 
 # Initialize database connection and tables
 def get_db():
@@ -510,6 +516,16 @@ class ClothingItemResponse(BaseModel):
 
 @st.cache_data
 def gpt4o_structured_clothing(item_description: str):
+   if not client:
+       return {
+           "name": "Clothing Item",
+           "color": "Unknown",
+           "type_of_clothing": "Unknown",
+           "season": "All",
+           "occasion": "Casual",
+           "additional_details": "OpenAI API key not configured"
+       }
+   
    prompt = """You are an expert in fashion. Please provide a brief, descriptive name for this clothing item.
    Return your response in this exact format:
    {
@@ -980,6 +996,8 @@ def clothing_data_insights():
     if st.button("Get Insights"):
         if user_question.strip() == "":
             st.error("Please enter a question.")
+        elif not client:
+            st.error("OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.")
         else:
             prompt = f"""Based on this wardrobe data:
             {user_clothing[['name', 'type_of_clothing', 'color', 'occasion', 'season']].to_string()}
@@ -2089,6 +2107,9 @@ def get_body_type_description(bmi):
 
 def analyze_style_preferences(preferences):
     """Analyze user's style preferences and return a style aesthetic"""
+    if not client:
+        return "Classic Minimalist"  # Default fallback
+    
     try:
         prompt = f"""As a fashion expert, analyze these style preferences and determine the user's primary style aesthetic:
         
@@ -2183,6 +2204,9 @@ def get_weather(city):
 
 def suggest_weather_appropriate_outfit(weather_data, user_clothing, style_aesthetic):
     """Get GPT-4 to suggest an outfit based on weather and user's style"""
+    
+    if not client:
+        return ["Basic outfit suggestion unavailable - OpenAI API key not configured"]
     
     prompt = f"""As a fashion expert, suggest an outfit from the user's wardrobe considering:
 
@@ -2652,6 +2676,9 @@ def body_type_quiz():
 
 def analyze_face_shape(responses):
     """Analyze quiz responses to determine face shape"""
+    if not client:
+        return "Oval"  # Default fallback
+    
     prompt = f"""Based on these characteristics:
     Face length: {responses['face_length']}
     Jaw shape: {responses['jaw_shape']} 
@@ -2708,6 +2735,9 @@ def get_season_tips(season):
 # Fix 1: Add missing function for analyzing body type
 def analyze_body_type(responses):
     """Analyze quiz responses to determine body type"""
+    if not client:
+        return "Rectangle"  # Default fallback
+    
     prompt = f"""Based on these characteristics:
     Shoulders: {responses['shoulders']}
     Waist: {responses['waist']}
@@ -2872,6 +2902,9 @@ def style_personality_quiz():
 
 def analyze_style_personality(responses):
     """Enhanced analysis of quiz responses to determine style personality"""
+    if not client:
+        return "Primary: Classic\nSecondary: Natural\nKey Characteristics: Timeless, comfortable, versatile"
+    
     prompt = f"""Based on these detailed style preferences:
     Weekend style: {responses['weekend_style']}
     Color approach: {responses['color_approach']}
