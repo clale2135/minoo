@@ -1,0 +1,16 @@
+[
+  {
+    "id": "d5e7715b-208d-42c4-9ed3-f5eecb285ba6",
+    "username": "f",
+    "item_name": "Flirty Flare Skirt",
+    "image_path": "uploads/MBJ-WB829-Womens-Flirty-Flare-Skirt-XS-RED_8d7bf4a0-b28a-4e8c-b8cd-c46d758fb2a2_1.89c843c6ab7288932dacb929a23114b1.webp",
+    "type_of_clothing": "Skirt",
+    "desired_types": [
+      "Skirt"
+    ],
+    "condition": "Gently Used",
+    "description": "",
+    "status": "active",
+    "created_at": "2025-02-06 18:04:29"
+  }
+]
