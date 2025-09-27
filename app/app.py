@@ -15,7 +15,6 @@ import uuid
 import time
 import requests
 import re
-import cv2
 from streamlit_drawable_canvas import st_canvas
 import io
 import functools
