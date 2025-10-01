@@ -1,0 +1,22 @@
+[
+  {
+    "id": "72e35552-3a0a-42bd-b3ec-eb870fd21c59",
+    "name": "Outfit 20250309_1923",
+    "items": [
+      {
+        "name": "Flirty Flare Skirt",
+        "image_path": "uploads/MBJ-WB829-Womens-Flirty-Flare-Skirt-XS-RED_8d7bf4a0-b28a-4e8c-b8cd-c46d758fb2a2_1.89c843c6ab7288932dacb929a23114b1.webp",
+        "type_of_clothing": "Skirt",
+        "color": "Red"
+      },
+      {
+        "name": "black shirt",
+        "image_path": "uploads/M01T12-TN_Front.webp",
+        "type_of_clothing": "Shirt",
+        "color": "Black"
+      }
+    ],
+    "occasion": "Casual",
+    "date_created": "2025-03-09 19:23:59"
+  }
+]

@@ -1,0 +1,27 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/style-app', '.']
+  
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/style-app']
+    
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'style-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/style-app'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'DB_NAME=${_DB_NAME},DB_USER=${_DB_USER},DB_HOST=${_DB_HOST}'
+      - '--set-secrets'
+      - 'DB_PASSWORD=db-password:latest'
+
+images:
+  - 'gcr.io/$PROJECT_ID/style-app' 
