@@ -16,6 +16,7 @@ import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
 import io
+import base64  # Add this at the top with other imports
 try:
     import pyperclip
 except ImportError:
@@ -25,485 +26,219 @@ except ImportError:
             st.code(text, language=None)
     pyperclip = PyperclipFallback()
 
-## clare's comments
-#minoo
-
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
 USER_DB_PATH = "user_db.csv"
 
-
-
+# Must be the first Streamlit command
+st.set_page_config(
+    page_title="greendrobe",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 def set_custom_style():
    st.markdown("""
        <style>
-       /* Luxury color scheme */
-       :root {
-           --primary-color: #B8860B;      /* Dark Golden */
-           --primary-hover: #DAA520;      /* Golden */
-           --background: #FDFBF7;         /* Cream White */
-           --text-color: #000000;         /* Pure Black */
-           --border-color: #D4C4B7;       /* Warm Gray */
-           --accent-color: #4A4039;       /* Rich Brown */
-           --gold-gradient: linear-gradient(135deg, #B8860B 0%, #DAA520 100%);
+       /* Add Cooper BT font */
+       @font-face {
+           font-family: 'Cooper BT';
+           src: url('https://db.onlinewebfonts.com/t/05554c33c36c4a1f3a523c1f4bd1637e.woff2') format('woff2'),
+                url('https://db.onlinewebfonts.com/t/05554c33c36c4a1f3a523c1f4bd1637e.woff') format('woff');
+           font-weight: normal;
+           font-style: normal;
        }
-
+       
+       /* Add Cooper Hewitt font */
+       @font-face {
+           font-family: 'Cooper Hewitt';
+           src: url('https://db.onlinewebfonts.com/t/c5d7c42f5fab7d4d7c0ee7c3e063c080.woff2') format('woff2'),
+                url('https://db.onlinewebfonts.com/t/c5d7c42f5fab7d4d7c0ee7c3e063c080.woff') format('woff');
+           font-weight: normal;
+           font-style: normal;
+       }
+       
+       /* Dark green theme for greendrobe */
+       :root {
+           --primary-color: #1B4D3E;      /* Dark Forest Green */
+           --primary-hover: #2D5A4A;      /* Medium Forest Green */
+           --background: #0F2B1F;         /* Very Dark Green */
+           --text-color: #E8F5E8;         /* Soft White */
+           --border-color: #1B4D3E;       /* Dark Forest Green */
+           --accent-color: #3A6B5A;       /* Medium Green */
+           --secondary-color: #4A7C6A;    /* Light Green */
+           --green-gradient: linear-gradient(135deg, #1B4D3E 0%, #2D5A4A 50%, #3A6B5A 100%);
+           --dark-green-gradient: linear-gradient(135deg, #0F2B1F 0%, #1B4D3E 100%);
+       }
 
        /* Main container styling */
        .stApp {
            background-color: var(--background);
            background-image:
-               linear-gradient(rgba(253, 251, 247, 0.97), rgba(253, 251, 247, 0.97)),
-               url('https://subtle-patterns.com/patterns/white-leather.png');
+               linear-gradient(rgba(15, 43, 31, 0.95), rgba(27, 77, 62, 0.95)),
+               url('https://subtle-patterns.com/patterns/green-fibers.png');
        }
       
-       .main {
-           max-width: 1400px;
-           margin: 0 auto;
-           padding: 3rem;
-       }
-      
-       /* Header styling */
+       /* Header styling with bubbly text effect */
        .stTitle {
            color: var(--text-color);
-           font-family: 'Playfair Display', Georgia, serif;
-           font-weight: 600;
+           font-family: 'Quicksand', 'Nunito', sans-serif;
+           font-weight: 700;
            padding-bottom: 2rem;
            border-bottom: 2px solid var(--border-color);
            margin-bottom: 2rem;
            letter-spacing: 0.5px;
+           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
        }
       
        /* Button styling */
        .stButton > button {
-           background: var(--gold-gradient);
+           background: var(--green-gradient);
            color: white;
-           border-radius: 4px;
+           border-radius: 20px;
            padding: 0.8rem 1.5rem;
            border: none;
-           font-weight: 500;
+           font-weight: 600;
            letter-spacing: 0.5px;
            text-transform: uppercase;
            font-size: 0.9rem;
            transition: all 0.3s ease;
-           box-shadow: 0 2px 4px rgba(184, 134, 11, 0.1);
+           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
        }
       
        .stButton > button:hover {
            transform: translateY(-2px);
-           box-shadow: 0 4px 12px rgba(184, 134, 11, 0.2);
+           box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
            background: var(--primary-hover);
        }
       
-       /* Sidebar styling with black background */
+       /* Sidebar styling with darker background */
        .css-1d391kg, [data-testid="stSidebar"] {
-           background-color: #000000 !important;
+           background-color: #141f12 !important;
            border-right: 1px solid var(--border-color);
-           box-shadow: 2px 0 20px rgba(0, 0, 0, 0.05);
+           box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
        }
-      
-       /* Sidebar text color including dropdown */
-       [data-testid="stSidebar"] .stMarkdown,
-       [data-testid="stSidebar"] .stSelectbox,
-       [data-testid="stSidebar"] label,
-       [data-testid="stSidebar"] div,
-       [data-testid="stSidebar"] p,
-       [data-testid="stSidebar"] span,
-       [data-testid="stSidebar"] .stSelectbox > div,
-       [data-testid="stSidebar"] select,
-       [data-testid="stSidebar"] option {
-           color: white !important;
+       
+       /* All text elements in white */
+       div, span, label, .stMarkdown, p, h1, h2, h3, .stTitle, .welcome-msg {
+           color: var(--text-color) !important;
        }
-
-
-       /* Dropdown specific styling */
-       [data-testid="stSidebar"] .stSelectbox > div > div {
-           background-color: transparent !important;
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox > div > div > div {
-           background-color: transparent !important;
-           color: white !important;
-       }
-
-
-       /* Dropdown arrow color */
-       [data-testid="stSidebar"] .stSelectbox svg {
-           color: white !important;
-       }
-
-
-       /* Dropdown options when expanded */
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
-           background-color: black !important;
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] ul {
-           background-color: black !important;
-       }
-
-
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] li {
-           color: white !important;
-       }
-
-
-       /* Hover state for dropdown options */
-       [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] li:hover {
-           background-color: rgba(255, 255, 255, 0.1) !important;
-       }
-
-
-       /* Sidebar button styling */
-       [data-testid="stSidebar"] .stButton > button {
-           background: rgba(255, 255, 255, 0.1);
-           border: 1px solid rgba(255, 255, 255, 0.2);
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] .stButton > button:hover {
-           background: rgba(255, 255, 255, 0.2);
-       }
-
-
-       /* Ensure all text elements in sidebar are white */
-       [data-testid="stSidebar"] * {
-           color: white !important;
-       }
-
-
-       /* Card-like containers for clothes */
+       
+       /* Card-like containers for clothes with forest theme */
        .clothes-card {
-           background-color: white;
-           border-radius: 8px;
+           background-color: rgba(255, 255, 255, 0.1);
+           border-radius: 15px;
            padding: 2rem;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
            margin-bottom: 2rem;
-           border: 1px solid rgba(212, 196, 183, 0.3);
+           border: 1px solid rgba(41, 59, 34, 0.3);
            transition: all 0.3s ease;
+           backdrop-filter: blur(5px);
        }
       
        .clothes-card:hover {
            transform: translateY(-3px);
-           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+           border-color: var(--primary-color);
        }
-      
-       /* Image styling */
-       .stImage {
-           border-radius: 8px;
-           overflow: hidden;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+       
+       /* App title - GreenDrobe with Cooper BT font */
+       .app-title {
+           font-family: 'Cooper BT', 'Cooper Black', 'Georgia', serif;
+           font-size: 3.5rem;
+           font-weight: 800;
+           color: white !important;
+           text-align: center;
+           margin: 1.5rem 0;
+           text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+           letter-spacing: 1px;
        }
-      
+       
+       /* Tagline styling with Cooper Hewitt font */
+       .app-tagline {
+           font-family: 'Cooper Hewitt', 'Helvetica Neue', sans-serif;
+           font-size: 1.5rem;
+           font-weight: 300;
+           color: white !important;
+           text-align: center;
+           margin-bottom: 2rem;
+           letter-spacing: 1px;
+       }
+       
+       /* Welcome message styling */
+       .welcome-msg {
+           color: var(--text-color);
+           text-align: center;
+           padding: 2rem 0;
+           margin-bottom: 2rem;
+           font-size: 1.2rem;
+           line-height: 1.8;
+           font-family: 'Quicksand', 'Nunito', sans-serif;
+           border-bottom: 1px solid var(--border-color);
+           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+       }
+       
        /* Input field styling */
        .stTextInput > div > div > input {
-           border-radius: 4px;
+           border-radius: 10px;
            border: 1px solid var(--border-color);
            padding: 0.8rem 1rem;
-           background-color: rgba(255, 255, 255, 0.8);
+           background-color: rgba(255, 255, 255, 0.1);
+           color: white !important;
            transition: all 0.2s ease;
        }
       
        .stTextInput > div > div > input:focus {
            border-color: var(--primary-color);
-           box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.1);
-           background-color: white;
+           box-shadow: 0 0 0 2px rgba(41, 59, 34, 0.2);
+           background-color: rgba(255, 255, 255, 0.15);
        }
-      
-       /* Multiselect styling */
-       .stMultiSelect > div > div > div {
-           border-radius: 4px;
-           border: 1px solid var(--border-color);
-           background-color: rgba(255, 255, 255, 0.8);
-       }
-      
-       /* Success message styling */
-       .stSuccess {
-           background-color: #E8F3E8;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #285E28;
-           margin: 1rem 0;
-       }
-      
-       /* Error message styling */
-       .stError {
-           background-color: #FBE9E7;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #C62828;
-           margin: 1rem 0;
-       }
-
-
-       /* Remove default backgrounds */
-       .element-container {
-           background-color: transparent !important;
-       }
-      
-       .stDataFrame {
-           background-color: transparent !important;
-       }
-
-
-       /* Welcome message styling */
-       .welcome-msg {
-           color: var(--text-color);
-           text-align: center;
-           padding: 3rem 0;
-           margin-bottom: 3rem;
-           font-size: 1.3rem;
-           line-height: 1.8;
-           font-family: 'Playfair Display', Georgia, serif;
-           border-bottom: 1px solid var(--border-color);
-       }
-
-
-       /* Container styling */
-       .st-emotion-cache-1y4p8pa {
-           max-width: 1400px;
-           padding: 3rem;
-       }
-
-
-       /* Form element spacing */
-       .stSelectbox, .stMultiSelect {
-           margin-bottom: 1.5rem;
-       }
-
-
-       /* Custom heading styles */
-       h1, h2, h3 {
-           font-family: 'Playfair Display', Georgia, serif;
-           color: var(--text-color);
-           letter-spacing: 0.5px;
-       }
-
-
+       
        /* Selectbox styling */
        .stSelectbox > div > div > div {
-           background-color: white;
+           background-color: rgba(255, 255, 255, 0.1);
            border: 1px solid var(--border-color);
-           border-radius: 4px;
-           padding: 0.5rem;
+           border-radius: 10px;
+           color: white !important;
        }
-
-
-       /* Table styling */
-       .dataframe {
+       
+       /* Multiselect styling */
+       .stMultiSelect > div > div > div {
+           border-radius: 10px;
            border: 1px solid var(--border-color);
-           border-radius: 8px;
-           overflow: hidden;
-           background: white;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-       }
-
-
-       .dataframe th {
-           background-color: #F8F5F1;
-           color: var(--text-color);
-           font-weight: 600;
-           padding: 1rem;
-           border-bottom: 2px solid var(--border-color);
-       }
-
-
-       .dataframe td {
-           padding: 0.8rem 1rem;
-           border-bottom: 1px solid var(--border-color);
-       }
-
-
-       /* Add decorative elements */
-       .stTitle::before {
-           content: "✦";
-           color: var(--primary-color);
-           margin-right: 1rem;
-           font-size: 1.2em;
-       }
-
-
-       .stTitle::after {
-           content: "✦";
-           color: var(--primary-color);
-           margin-left: 1rem;
-           font-size: 1.2em;
-       }
-
-
-       /* Sidebar header */
-       .sidebar .sidebar-content {
-           background-color: #FFFFFF;
-           padding: 2rem 1rem;
-       }
-
-
-       /* Toast styling */
-       .stToast {
-           background-color: white !important;
-           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-           border: 1px solid var(--border-color) !important;
-           border-radius: 8px !important;
-           padding: 1rem !important;
-       }
-
-
-       /* Update text colors in specific elements */
-       .stTitle, h1, h2, h3, p, .welcome-msg, .stTextInput > div > div > input {
-           color: #000000 !important;
-       }
-
-
-       /* Table text color */
-       .dataframe th, .dataframe td {
-           color: #000000 !important;
-       }
-
-
-       /* Success and error messages remain colored for visibility */
-       .stSuccess {
-           background-color: #E8F3E8;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #285E28;
-           margin: 1rem 0;
-       }
-      
-       .stError {
-           background-color: #FBE9E7;
-           color: #000000;
-           padding: 1rem;
-           border-radius: 4px;
-           border-left: 4px solid #C62828;
-           margin: 1rem 0;
-       }
-
-
-       /* Ensure all regular text is black */
-       div, span, label, .stMarkdown {
-           color: #000000 !important;
-       }
-
-
-       /* Keep button text white for contrast */
-       .stButton > button {
+           background-color: rgba(255, 255, 255, 0.1);
            color: white !important;
        }
-
-
-       /* Comprehensive sidebar and dropdown styling */
-       [data-testid="stSidebar"] {
-           background-color: #000000;
-       }
-
-
-       /* Target all text elements in sidebar */
-       [data-testid="stSidebar"] * {
-           color: white !important;
-       }
-
-
-       /* Specific dropdown styling */
-       [data-testid="stSidebar"] [data-baseweb="select"] {
-           color: white !important;
-       }
-
-
-       [data-testid="stSidebar"] [data-baseweb="select"] * {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       /* Dropdown menu items */
-       [data-baseweb="popover"] * {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       [data-baseweb="select"] [role="listbox"] {
-           background-color: black !important;
-       }
-
-
-       [data-baseweb="select"] [role="option"] {
-           color: white !important;
-           background-color: black !important;
-       }
-
-
-       /* Hover state for dropdown options */
-       [data-baseweb="select"] [role="option"]:hover {
-           background-color: #333333 !important;
-       }
-
-
-       /* Selected option in dropdown */
+       
+       /* Selected tags in multiselect */
        [data-baseweb="tag"] {
-           background-color: #333333 !important;
-           color: white !important;
+           background-color: var(--primary-color) !important;
+           border: none !important;
        }
-
-
-       /* Multiselect tag styling for both sidebar and main content */
-       [data-baseweb="tag"] {
-           background-color: #333333 !important;
-           border: 1px solid rgba(255, 255, 255, 0.2) !important;
-       }
-
-
+       
        [data-baseweb="tag"] span {
            color: white !important;
        }
-
-
-       /* Close button (x) in the tag */
-       [data-baseweb="tag"] button {
-           color: white !important;
-       }
-
-
-       /* Hover state for the close button */
-       [data-baseweb="tag"] button:hover {
-           background-color: rgba(255, 255, 255, 0.1) !important;
-       }
-
-
-       /* Make sure the text inside multiselect is visible */
-       .stMultiSelect div[role="button"] span {
-           color: black !important;
-       }
-
-
-       /* Selected tags in multiselect */
-       .stMultiSelect [data-baseweb="tag"] {
-           background-color: #333333 !important;
-       }
-
-
-       .stMultiSelect [data-baseweb="tag"] span {
-           color: white !important;
-       }
-
-
+       
        /* Dropdown items */
-       .stMultiSelect [role="listbox"] div {
-           color: black !important;
+       [data-baseweb="select"] [role="listbox"],
+       [data-baseweb="select"] [role="option"] {
+           background-color: #1A2918 !important;
+           color: white !important;
        }
-
-
+       
+       /* Hover state for dropdown options */
+       [data-baseweb="select"] [role="option"]:hover {
+           background-color: #293b22 !important;
+       }
+       
+       /* Keep the rest of your existing styles but update colors as needed */
+       // ... existing code ...
        </style>
+       
+       <!-- Add greendrobe title at the top -->
+       <div class="app-title">greendrobe</div>
    """, unsafe_allow_html=True)
 
 
@@ -724,7 +459,7 @@ def suggest_unique_name(base_name: str, user_clothing: pd.DataFrame) -> str:
 
 
 def image_uploader_and_display():
-   st.title("Add to Your Wardrobe")
+   st.title("Add to Your greendrobe")
   
    save_directory = "uploads"
    if not os.path.exists(save_directory):
@@ -1072,7 +807,7 @@ def clothing_data_insights():
     user_clothing = load_user_clothing()
 
     if user_clothing.empty:
-        st.info("Add some clothes to your wardrobe first!")
+        st.info("Add some clothes to your greendrobe first!")
         return
 
     user_question = st.text_input(
@@ -1084,10 +819,10 @@ def clothing_data_insights():
         if user_question.strip() == "":
             st.error("Please enter a question.")
         else:
-            prompt = f"""Based on this wardrobe data:
+            prompt = f"""Based on this greendrobe data:
             {user_clothing[['name', 'type_of_clothing', 'color', 'occasion', 'season']].to_string()}
             
-            Answer the following question by ONLY listing the specific names of items from the wardrobe above.
+            Answer the following question by ONLY listing the specific names of items from the greendrobe above.
             Do not add any descriptions or explanations. Just list the item names, one per line.
             
             Question: {user_question}"""
@@ -1096,7 +831,7 @@ def clothing_data_insights():
                 response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[
-                        {"role": "system", "content": "You are a fashion expert. Respond only with the exact names of clothing items from the provided wardrobe, one item per line."},
+                        {"role": "system", "content": "You are a fashion expert. Respond only with the exact names of clothing items from the provided greendrobe, one item per line."},
                         {"role": "user", "content": prompt}
                     ]
                 )
@@ -1171,7 +906,7 @@ def clothing_data_insights():
                                     # Give user time to see the success message
                                     time.sleep(2)
                                     # Force a page refresh
-                                    st.experimental_rerun()
+                                    st.rerun()
                         except Exception as e:
                             st.error(f"Error saving outfit: {str(e)}")
                             st.write("Debug: Save button error:", str(e))
@@ -1191,7 +926,7 @@ def display_saved_outfits():
    user_clothing = load_user_clothing()
   
    if user_clothing.empty:
-       st.info("Add some clothes to your wardrobe first!")
+       st.info("Add some clothes to your greendrobe first!")
        return
   
    # Add "Create New Outfit" button at the top
@@ -1470,11 +1205,11 @@ def update_image_paths():
 
 def show_tutorial():
     """Display a comprehensive guide for new users"""
-    st.title("🎯 Getting Started with Your Digital Wardrobe")
+    st.title("🎯 Getting Started with greendrobe")
     
     # Welcome Section
     st.markdown("""
-        ### Welcome to Your Digital Wardrobe! 
+        ### Welcome to greendrobe! 
         Let's walk through how to make the most of your new digital closet.
     """)
     
@@ -1482,7 +1217,7 @@ def show_tutorial():
     st.markdown("""
         ### 📍 Navigation
         You'll find four main sections in the sidebar:
-        1. **Image Uploader and Display** - Add clothes to your wardrobe
+        1. **Image Uploader and Display** - Add clothes to your greendrobe
         2. **Saved Clothes** - View and manage your clothing items
         3. **Clothing Data Insights** - Get AI-powered outfit suggestions
         4. **Saved Outfits** - Create and view your outfit combinations
@@ -1497,13 +1232,13 @@ def show_tutorial():
                 - Verify or edit the AI-suggested name
                 - Select colors, type, seasons, and occasions
                 - Add any additional details
-                - Click 'Save' to add to your wardrobe
+                - Click 'Save' to add to your greendrobe
             
             **Pro tip**: Take photos of your clothes on a clear background for best results!
         """)
     
     # Managing Clothes Tutorial
-    with st.expander("👕 Managing Your Wardrobe", expanded=True):
+    with st.expander("👕 Managing Your greendrobe", expanded=True):
         st.markdown("""
             In the **Saved Clothes** section:
             - View all your uploaded items
@@ -1552,132 +1287,684 @@ def show_tutorial():
         st.rerun()
 
 def style_quiz():
-    """
-    Quiz to determine user's style aesthetic.
-    Returns True when completed.
-    """
-    if 'quiz_completed' not in st.session_state:
-        st.session_state.quiz_completed = False
+    """Run personal attributes quiz, avatar customization, and style quiz in sequence"""
+    if 'personal_attributes' not in st.session_state:
+        personal_attributes_quiz()
+    elif 'avatar_customized' not in st.session_state:
+        customize_avatar_and_profile()
+    else:
+        run_style_quiz()
 
-    if not st.session_state.quiz_completed:
-        st.title("🎨 Discover Your Style")
-        if st.session_state.get('retaking_quiz', False):
-            st.markdown("""
-                ### Retaking the Style Quiz
-                Let's update your style profile! Answer these questions based on your current preferences.
-            """)
+def generate_dicebear_avatar(avatar_preferences):
+    """Generate avatar using DiceBear API"""
+    try:
+        # Valid hair styles for adventurer
+        hair_map = {
+            "Short": "short01",
+            "Medium": "short02",
+            "Long": "short03",
+            "Buzz Cut": "short04",
+            "Bald": "short05"
+        }
+        
+        # Map color names to hex codes (without #)
+        hair_color_map = {
+            "black": "000000",
+            "brown": "8B4513",
+            "blonde": "FFD700",
+            "red": "8B0000"
+        }
+        
+        # Map skin tones to hex codes (without #)
+        skin_tone_map = {
+            "light": "FFE0BD",
+            "brown": "C68642",
+            "dark": "8D5524"
+        }
+        
+        # Get hex codes for selected colors
+        hair_color = hair_color_map.get(avatar_preferences['hair']['color'].lower(), "000000")
+        skin_color = skin_tone_map.get(avatar_preferences['skin_tone'].lower(), "FFE0BD")
+        
+        # Create URL for DiceBear API
+        base_url = "https://api.dicebear.com/7.x/adventurer/svg"
+        
+        # Build options string with valid parameters
+        options = {
+            "seed": "custom-seed",  # Add some randomness
+            "flip": "false",
+            "rotate": "0",
+            "scale": "100",
+            "hair": hair_map.get(avatar_preferences['hair']['length'], "short01"),
+            "skinColor": skin_color,
+            "hairColor": hair_color,
+            "size": "200"
+        }
+        
+        # Convert options to URL parameters
+        options_str = "&".join([f"{k}={v}" for k, v in options.items()])
+        
+        # Construct final URL
+        url = f"{base_url}?{options_str}"
+        
+        # Get the avatar
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            return response.content, url
         else:
-            st.markdown("Let's find out your personal style aesthetic! Answer these questions to help us understand your fashion preferences.")
+            st.error(f"Error generating avatar: {response.status_code} - {response.text}")
+            st.error(f"URL attempted: {url}")
+            return None, None
+            
+    except Exception as e:
+        st.error(f"Error generating avatar: {str(e)}")
+        return None, None
 
-        # Initialize session state for responses if not exists
-        if 'quiz_responses' not in st.session_state:
-            st.session_state.quiz_responses = {}
-
-        # Quiz questions
-        questions = {
-            'color_palette': {
-                'question': "Which color palette resonates with you the most?",
-                'options': [
-                    "Neutrals (Black, White, Beige, Gray)",
-                    "Pastels (Soft Pink, Light Blue, Mint)",
-                    "Bold & Bright (Red, Yellow, Electric Blue)",
-                    "Earth Tones (Brown, Olive, Rust)",
-                    "Monochrome (Black & White)",
-                    "Jewel Tones (Deep Purple, Emerald, Ruby)"
-                ]
-            },
-            'style_icons': {
-                'question': "Which style icon's aesthetic do you most admire?",
-                'options': [
-                    "Audrey Hepburn (Classic Elegance)",
-                    "Kate Moss (Effortless Cool)",
-                    "Rihanna (Bold and Experimental)",
-                    "Steve Jobs (Minimal Tech)",
-                    "Harry Styles (Gender-Fluid, Eclectic)",
-                    "Zendaya (Modern Sophistication)"
-                ]
-            },
-            'weekend_outfit': {
-                'question': "What's your go-to weekend outfit?",
-                'options': [
-                    "Athleisure (Leggings, Sneakers, Comfortable Tops)",
-                    "Casual Chic (Jeans, Blouse, Accessories)",
-                    "Bohemian (Flowy Dresses, Natural Fabrics)",
-                    "Edgy (Leather Jacket, Boots, Dark Colors)",
-                    "Preppy (Tailored Pieces, Classic Patterns)",
-                    "Streetwear (Oversized, Modern, Bold)"
-                ]
+def customize_avatar_and_profile():
+    """Allow users to customize their avatar and profile"""
+    st.title("🎨 Customize Your Profile")
+    
+    # Initialize session state for avatar preferences if not exists
+    if 'temp_avatar_preferences' not in st.session_state:
+        st.session_state.temp_avatar_preferences = {
+            "skin_tone": "light",
+            "hair": {
+                "length": "Short",
+                "color": "brown"
             }
         }
-
-        # Display questions
-        for key, data in questions.items():
-            st.session_state.quiz_responses[key] = st.radio(
-                data['question'],
-                data['options'],
-                key=f"quiz_{key}"
-            )
-            st.markdown("---")
-
-        if st.button("✨ Discover My Style", type="primary"):
-            # Analyze responses
-            style = analyze_style_preferences(st.session_state.quiz_responses)
-            
-            # Save style to user profile
-            save_user_style(st.session_state.username, style)
-            st.session_state.style_aesthetic = style
-            st.session_state.quiz_completed = True
-            st.rerun()
-
-    else:  # Show results and transition to tutorial
-        st.success("🎉 Style Analysis Complete!")
-        st.markdown(f"""
-            ## Your Style Aesthetic: {st.session_state.style_aesthetic}
-            
-            We'll use this information to help create outfits that match your personal style!
-            
-            Click continue to learn how to use Your Digital Wardrobe.
-        """)
+    
+    # Create two columns for avatar preview and customization
+    col_preview, col_customize = st.columns([1, 2])
+    
+    # Avatar customization outside the form
+    with col_customize:
+        st.markdown("### Avatar Customization")
         
-        if st.button("Continue to Tutorial", type="primary"):
-            st.session_state.show_style_quiz = False
-            st.session_state.show_tutorial = True
-            st.session_state.quiz_completed = False  # Reset for next time
-            st.session_state.retaking_quiz = False  # Reset retaking flag
+        # Avatar Base
+        col1, col2 = st.columns(2)
+        with col1:
+            skin_tone = st.select_slider(
+                "Skin Tone",
+                options=["light", "brown", "dark"],
+                value=st.session_state.temp_avatar_preferences["skin_tone"],
+                key="skin_tone_slider"
+            )
+        with col2:
+            hair_color = st.select_slider(
+                "Hair Color",
+                options=["black", "brown", "blonde", "red"],
+                value=st.session_state.temp_avatar_preferences["hair"]["color"],
+                key="hair_color_slider"
+            )
+        
+        # Hair Style
+        hair_length = st.selectbox(
+            "Hair Style",
+            ["Short", "Medium", "Long", "Buzz Cut", "Bald"],
+            index=["Short", "Medium", "Long", "Buzz Cut", "Bald"].index(
+                st.session_state.temp_avatar_preferences["hair"]["length"]
+            ),
+            key="hair_length_select"
+        )
+    
+    # Update temp preferences
+    st.session_state.temp_avatar_preferences = {
+        "skin_tone": skin_tone,
+        "hair": {
+            "length": hair_length,
+            "color": hair_color
+        }
+    }
+    
+    # Preview avatar in the left column
+    with col_preview:
+        st.markdown("### Avatar Preview")
+        avatar_svg, avatar_url = generate_dicebear_avatar(st.session_state.temp_avatar_preferences)
+        if avatar_svg:
+            st.markdown(avatar_svg.decode(), unsafe_allow_html=True)
+    
+    # Profile form
+    with st.form("profile_form"):
+        st.markdown("### Profile Details")
+        
+        # Style Preferences
+        style_keywords = st.multiselect(
+            "Select keywords that describe your style",
+            ["Classic", "Modern", "Bohemian", "Streetwear", "Minimalist", 
+             "Vintage", "Preppy", "Edgy", "Romantic", "Athletic",
+             "Elegant", "Casual", "Artistic", "Professional", "Eclectic"],
+            max_selections=5
+        )
+        
+        # Favorite Colors
+        favorite_colors = st.multiselect(
+            "Select your favorite colors to wear",
+            ["Black", "White", "Navy", "Gray", "Beige", "Brown",
+             "Red", "Blue", "Green", "Yellow", "Purple", "Pink",
+             "Orange", "Gold", "Silver"],
+            max_selections=5
+        )
+        
+        # Bio
+        bio = st.text_area(
+            "Write a short bio about your style journey",
+            max_chars=200,
+            placeholder="Tell us about your style journey, preferences, and goals..."
+        )
+        
+        # Social Media Integration
+        st.markdown("#### Social Media (Optional)")
+        col8, col9 = st.columns(2)
+        with col8:
+            instagram = st.text_input("Instagram Handle", placeholder="@username")
+        with col9:
+            pinterest = st.text_input("Pinterest Username", placeholder="username")
+        
+        # Style Goals
+        style_goals = st.multiselect(
+            "What are your style goals?",
+            ["Build a capsule greendrobe", "Develop a signature style",
+             "Dress more professionally", "Express creativity through fashion",
+             "Shop more sustainably", "Mix and match better",
+             "Find better-fitting clothes", "Try new styles",
+             "Dress more confidently", "Organize greendrobe better"],
+            max_selections=3
+        )
+        
+        # Submit button
+        submit = st.form_submit_button("Save Profile & Continue to Style Quiz")
+        
+        if submit:
+            # Save final avatar and profile preferences to session state
+            st.session_state.avatar_preferences = st.session_state.temp_avatar_preferences
+            
+            # Generate and save final avatar
+            final_avatar_svg, final_avatar_url = generate_dicebear_avatar(st.session_state.avatar_preferences)
+            if final_avatar_svg:
+                st.session_state.avatar_svg = final_avatar_svg
+                st.session_state.avatar_url = final_avatar_url
+            
+            st.session_state.profile_preferences = {
+                "style_keywords": style_keywords,
+                "favorite_colors": favorite_colors,
+                "bio": bio,
+                "social_media": {
+                    "instagram": instagram,
+                    "pinterest": pinterest
+                },
+                "style_goals": style_goals
+            }
+            
+            st.session_state.avatar_customized = True
+            st.session_state.show_style_quiz = True  # New flag to show quiz
+            
+            # Show success message
+            st.success("Profile saved! Let's discover your style!")
+            time.sleep(2)
             st.rerun()
 
-    return False
+def personal_attributes_quiz():
+    """Quiz to gather physical characteristics and preferences"""
+    st.title("👤 Personal Attributes Quiz")
+    st.markdown("""
+        Before we determine your style, let's gather some information about you.
+        This will help us provide more personalized style recommendations.
+    """)
+    
+    # Create form for attributes
+    with st.form("personal_attributes_form"):
+        # Basic Information
+        st.markdown("### Basic Information")
+        gender = st.selectbox(
+            "Gender",
+            ["Female", "Male", "Non-binary", "Prefer not to say"]
+        )
+        
+        age = st.number_input(
+            "Age",
+            min_value=13,
+            max_value=120,
+            value=25
+        )
+        
+        # Physical Characteristics
+        st.markdown("### Physical Characteristics")
+        
+        # Height in ft/in
+        col1, col2 = st.columns(2)
+        with col1:
+            feet = st.number_input("Height (feet)", min_value=3, max_value=8, value=5)
+        with col2:
+            inches = st.number_input("Height (inches)", min_value=0, max_value=11, value=6)
+        height_value = (feet * 30.48) + (inches * 2.54)  # Store in cm internally
+        
+        # Weight in lbs
+        weight_lbs = st.number_input(
+            "Weight (lbs)",
+            min_value=66,
+            max_value=550,
+            value=154
+        )
+        weight_value = weight_lbs * 0.45359237  # Store in kg internally
+        
+        # Body Shape Characteristics
+        st.markdown("### Body Shape Details")
+        shoulder_width = st.select_slider(
+            "Shoulder Width",
+            options=["Narrow", "Average", "Broad"],
+            value="Average"
+        )
+        
+        neck_length = st.select_slider(
+            "Neck Length",
+            options=["Short", "Average", "Long"],
+            value="Average"
+        )
+        
+        leg_length = st.select_slider(
+            "Leg Length Proportion",
+            options=["Short", "Average", "Long"],
+            value="Average"
+        )
+        
+        # Fit Preferences
+        st.markdown("### Fit Preferences")
+        preferred_fit = st.multiselect(
+            "Preferred Clothing Fit",
+            ["Loose/Relaxed", "Regular/Classic", "Slim/Fitted", "Oversized"],
+            default=["Regular/Classic"]
+        )
+        
+        clothing_comfort = st.multiselect(
+            "What's most important in your clothing?",
+            ["Comfort", "Style", "Versatility", "Durability", "Easy Care"],
+            default=["Comfort", "Style"]
+        )
+        
+        # Areas to highlight/minimize
+        st.markdown("### Style Focus")
+        highlight_areas = st.multiselect(
+            "Areas you'd like to highlight",
+            ["Shoulders", "Arms", "Waist", "Legs", "Back", "None"],
+            default=["None"]
+        )
+        
+        minimize_areas = st.multiselect(
+            "Areas you'd like to minimize",
+            ["Shoulders", "Arms", "Waist", "Legs", "Back", "None"],
+            default=["None"]
+        )
+        
+        # Submit button
+        submit = st.form_submit_button("Continue to Style Quiz")
+        
+        if submit:
+            # Calculate BMI for general body type guidance
+            bmi = weight_value / ((height_value/100) ** 2)
+            
+            # Save all attributes to session state
+            st.session_state.personal_attributes = {
+                "gender": gender,
+                "age": age,
+                "height": {
+                    "feet": feet,
+                    "inches": inches,
+                    "cm": height_value  # Store cm for calculations
+                },
+                "weight": {
+                    "lbs": weight_lbs,
+                    "kg": weight_value  # Store kg for calculations
+                },
+                "bmi": bmi,
+                "shoulder_width": shoulder_width,
+                "neck_length": neck_length,
+                "leg_length": leg_length,
+                "preferred_fit": preferred_fit,
+                "clothing_comfort": clothing_comfort,
+                "highlight_areas": highlight_areas,
+                "minimize_areas": minimize_areas
+            }
+            
+            # Show success message and rerun to start style quiz
+            st.success("Personal attributes saved! Proceeding to style quiz...")
+            time.sleep(1)
+            st.rerun()  # Changed from experimental_rerun
 
-def analyze_style_preferences(responses):
-    """Analyze quiz responses using GPT-4 to determine style aesthetic"""
-    prompt = f"""Based on these style preferences:
-    Color Preference: {responses['color_palette']}
-    Style Icon: {responses['style_icons']} we
-    Weekend Outfit: {responses['weekend_outfit']}
+def run_style_quiz():
+    """Run the main style quiz with personal attributes context"""
+    # Add custom CSS for better mobile responsiveness
+    st.markdown("""
+        <style>
+        /* Mobile-first responsive design */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            flex-grow: 1;
+            min-width: 100px;
+            white-space: normal;
+            padding: 10px 5px;
+            font-size: 14px;
+        }
+        
+        /* Custom container for better spacing on mobile */
+        .quiz-container {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Responsive text sizing */
+        @media (max-width: 768px) {
+            .quiz-title {
+                font-size: 24px !important;
+            }
+            .quiz-section {
+                font-size: 20px !important;
+            }
+            .quiz-text {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Custom styling for multiselect */
+        .stMultiSelect [data-baseweb="select"] {
+            max-width: 100%;
+        }
+        
+        /* Custom styling for radio buttons */
+        .stRadio > label {
+            font-size: 14px;
+            padding: 8px 0;
+        }
+        
+        /* Progress bar styling */
+        .stProgress > div > div {
+            height: 15px;
+            border-radius: 10px;
+        }
+        
+        /* Button styling */
+        .stButton > button {
+            width: 100%;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        /* Container for better spacing */
+        .section-container {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
-    Determine the user's primary style aesthetic from these options:
-    - Minimalist
-    - Classic
-    - Bohemian
-    - Streetwear
-    - Preppy
-    - Avant-garde
-    - Romantic
-    - Athletic
-    - Vintage
-    - Modern
+    # Quiz header with responsive classes
+    st.markdown('<h1 class="quiz-title">🎨 Style Personality Quiz</h1>', unsafe_allow_html=True)
     
-    Return ONLY the style name, nothing else."""
-    
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a fashion expert. Analyze the style preferences and return only one word representing the primary style aesthetic."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    
-    return response.choices[0].message.content.strip()
+    with st.form("style_quiz_form"):
+        st.markdown("""
+            <div class="quiz-text">
+                Complete each section to discover your unique style profile.
+                Navigate through the tabs below to answer all questions.
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Create responsive tabs
+        tab_labels = ["🎨", "👗", "👔", "💍", "🎯"]
+        tab_names = ["Colors", "Style", "Clothes", "Accessories", "Goals"]
+        
+        # Detect screen size using JavaScript
+        st.markdown("""
+            <script>
+                if (window.innerWidth < 768) {
+                    // Use emoji-only tabs on mobile
+                    document.querySelectorAll('[data-baseweb="tab"]').forEach((tab, index) => {
+                        tab.textContent = tab_labels[index];
+                    });
+                }
+            </script>
+        """, unsafe_allow_html=True)
+        
+        tabs = st.tabs(tab_labels)
+        
+        with tabs[0]:
+            st.markdown('<h3 class="quiz-section">Colors & Patterns</h3>', unsafe_allow_html=True)
+            
+            # Use container for better mobile spacing
+            with st.container():
+                color_palette = st.selectbox(
+                    "Which color palette resonates with you most?",
+                    [
+                        "Neutrals (Black, White, Gray)",
+                        "Earth Tones (Brown, Olive)",
+                        "Pastels (Soft Pink, Blue)",
+                        "Bold Colors (Red, Blue)",
+                        "Monochrome",
+                        "Jewel Tones",
+                        "Cool Tones",
+                        "Warm Tones"
+                    ]
+                )
+                
+                pattern_preference = st.multiselect(
+                    "Preferred patterns?",
+                    [
+                        "Solid Colors",
+                        "Stripes",
+                        "Floral",
+                        "Geometric",
+                        "Animal Print",
+                        "Plaid",
+                        "Polka Dots",
+                        "Abstract"
+                    ],
+                    max_selections=3
+                )
+        
+        with tabs[1]:
+            st.markdown('<h3 class="quiz-section">Style Inspiration</h3>', unsafe_allow_html=True)
+            
+            style_icons = st.multiselect(
+                "Style icons that inspire you?",
+                [
+                    "Audrey Hepburn (Classic)",
+                    "Kate Moss (Cool)",
+                    "David Beckham (Modern)",
+                    "Rihanna (Bold)",
+                    "Steve Jobs (Minimal)",
+                    "Grace Kelly (Timeless)",
+                    "Harry Styles (Eclectic)",
+                    "Michelle Obama (Polished)"
+                ],
+                max_selections=2
+            )
+        
+        with tabs[2]:
+            st.markdown('<h3 class="quiz-section">Clothing Choices</h3>', unsafe_allow_html=True)
+            
+            weekend_outfit = st.radio(
+                "Ideal weekend outfit?",
+                [
+                    "Jeans & Tee",
+                    "Dress/Skirt",
+                    "Athleisure",
+                    "Vintage Style",
+                    "Tailored Look",
+                    "Bohemian"
+                ]
+            )
+            
+            workday_style = st.radio(
+                "Daily style preference?",
+                [
+                    "Professional",
+                    "Creative",
+                    "Casual-Smart",
+                    "Trendy",
+                    "Classic",
+                    "Comfortable"
+                ]
+            )
+        
+        with tabs[3]:
+            st.markdown('<h3 class="quiz-section">Accessories</h3>', unsafe_allow_html=True)
+            
+            accessory_preference = st.multiselect(
+                "Favorite accessories?",
+                [
+                    "Statement Jewelry",
+                    "Minimal Jewelry",
+                    "Scarves",
+                    "Belts",
+                    "Watches",
+                    "Hats",
+                    "Bags",
+                    "Hair Pieces"
+                ],
+                max_selections=3
+            )
+        
+        with tabs[4]:
+            st.markdown('<h3 class="quiz-section">Style Goals</h3>', unsafe_allow_html=True)
+            
+            style_goals = st.multiselect(
+                "Your style goals?",
+                [
+                    "Build Versatile greendrobe",
+                    "Develop Signature Look",
+                    "Stay Trendy",
+                    "Express Creativity",
+                    "Dress Professionally",
+                    "Create Easy Outfits",
+                    "Shop Sustainably",
+                    "Better Fit"
+                ],
+                max_selections=3
+            )
+            
+            comfort_style = st.select_slider(
+                "Comfort vs. Style?",
+                options=["Comfort", "Balanced", "Style"],
+                value="Balanced"
+            )
+        
+        # Progress indicator
+        filled_fields = sum([
+            bool(color_palette),
+            bool(pattern_preference),
+            bool(style_icons),
+            bool(weekend_outfit),
+            bool(workday_style),
+            bool(accessory_preference),
+            bool(style_goals),
+            bool(comfort_style)
+        ])
+        progress = filled_fields / 8
+        
+        st.markdown('<div class="section-container">', unsafe_allow_html=True)
+        st.progress(progress, text=f"Quiz Progress: {int(progress * 100)}%")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Submit button
+        submit = st.form_submit_button(
+            "✨ Discover My Style ✨",
+            use_container_width=True,
+            type="primary"
+        )
+        
+        if submit:
+            if progress < 1:
+                st.error("Please complete all sections!")
+            else:
+                with st.spinner("✨ Analyzing your style..."):
+                    style_preferences = {
+                        "color_palette": color_palette,
+                        "pattern_preference": pattern_preference,
+                        "style_icons": style_icons,
+                        "weekend_outfit": weekend_outfit,
+                        "workday_style": workday_style,
+                        "accessory_preference": accessory_preference,
+                        "style_goals": style_goals,
+                        "comfort_style": comfort_style
+                        # Removed shopping_preference as it's no longer collected
+                    }
+                    
+                    style_aesthetic = analyze_style_preferences(style_preferences)
+                    
+                    # Save and update
+                    save_user_style(st.session_state.username, style_aesthetic)
+                    st.session_state.style_aesthetic = style_aesthetic
+                    st.session_state.quiz_completed = True
+                    st.session_state.show_style_quiz = False
+                    st.session_state.show_homepage = True
+                    
+                    st.success(f"✨ Your style aesthetic is: {style_aesthetic}")
+                    time.sleep(2)
+                    st.rerun()
+
+def get_body_type_description(bmi):
+    """Get a general body type description based on BMI"""
+    if bmi < 18.5:
+        return "Slim"
+    elif bmi < 25:
+        return "Regular"
+    elif bmi < 30:
+        return "Full"
+    else:
+        return "Bold"
+
+def analyze_style_preferences(preferences):
+    """Analyze user's style preferences and return a style aesthetic"""
+    try:
+        prompt = f"""As a fashion expert, analyze these style preferences and determine the user's primary style aesthetic:
+        
+        Colors: {preferences['color_palette']}
+        Patterns: {', '.join(preferences['pattern_preference'])}
+        Style Icons: {', '.join(preferences['style_icons'])}
+        Weekend Style: {preferences['weekend_outfit']}
+        Work Style: {preferences['workday_style']}
+        Accessories: {', '.join(preferences['accessory_preference'])}
+        Style Goals: {', '.join(preferences['style_goals'])}
+        Comfort vs Style: {preferences['comfort_style']}
+        
+        Return only one of these style aesthetics:
+        - Classic Minimalist
+        - Bohemian Free Spirit
+        - Modern Professional
+        - Trendy Fashion Forward
+        - Casual Chic
+        - Elegant Sophisticate
+        - Eclectic Creative
+        - Athletic Luxe
+        - Vintage Romantic
+        - Contemporary Edge
+        """
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a fashion expert. Respond with only one style aesthetic from the given list."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=50,
+            temperature=0.7
+        )
+        
+        style_aesthetic = response.choices[0].message.content.strip()
+        return style_aesthetic
+        
+    except Exception as e:
+        st.error(f"Error analyzing style preferences: {str(e)}")
+        return "Casual Chic"  # Default fallback style
 
 def save_user_style(username, style_aesthetic):
     """Save user's style aesthetic to their profile"""
@@ -1730,7 +2017,7 @@ def get_weather(city):
 def suggest_weather_appropriate_outfit(weather_data, user_clothing, style_aesthetic):
     """Get GPT-4 to suggest an outfit based on weather and user's style"""
     
-    prompt = f"""As a fashion expert, suggest an outfit from the user's wardrobe considering:
+    prompt = f"""As a fashion expert, suggest an outfit from the user's greendrobe considering:
 
 Current Weather:
 - Temperature: {weather_data['temperature']}°C
@@ -1743,7 +2030,7 @@ User's Style: {style_aesthetic}
 Available Clothing Items:
 {user_clothing[['name', 'type_of_clothing', 'color', 'season']].to_string()}
 
-Suggest an appropriate outfit by listing specific items from their wardrobe that would:
+Suggest an appropriate outfit by listing specific items from their greendrobe that would:
 1. Be comfortable in the current weather
 2. Match their style aesthetic
 3. Be appropriate for the conditions
@@ -1793,7 +2080,7 @@ def weather_based_outfits():
             user_clothing = load_user_clothing()
             
             if user_clothing.empty:
-                st.info("Add some clothes to your wardrobe first!")
+                st.info("Add some clothes to your greendrobe first!")
                 return
             
             # Get outfit suggestion
@@ -2016,7 +2303,8 @@ def change_page(page_name: str):
 
 def homepage():
     """Display the homepage with outfit challenges and features"""
-    st.title("🏠 Welcome to Your Digital Wardrobe")
+    # Replace the title with a styled tagline
+    st.markdown('<div class="app-tagline">Effortless Looks, Every Day.</div>', unsafe_allow_html=True)
     
     # User's Style Profile Summary
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -2027,22 +2315,6 @@ def homepage():
             Your Style: **{get_user_style()}**
         """)
     
-    with col2:
-        if st.button("📊 View My Stats", key="view_stats_button"):
-            st.session_state.show_stats = not st.session_state.get('show_stats', False)
-    
-    with col3:
-        if st.button("🎨 Retake Style Quiz"):
-            st.session_state.show_style_quiz = True
-            st.session_state.quiz_completed = False
-    
-    # Show stats if enabled
-    if st.session_state.get('show_stats', False):
-        show_wardrobe_stats()
-        if st.button("Close Stats", key="close_stats_button"):
-            st.session_state.show_stats = False
-    
-    # Outfit Challenges Section
     st.markdown("### 🏆 Outfit Challenges")
     
     if st.session_state.get('submitting_challenge', False):
@@ -2163,11 +2435,11 @@ def show_past_challenges():
                 st.markdown("---")
 
 def show_wardrobe_stats():
-    """Display user's wardrobe statistics"""
+    """Display user's greendrobe statistics"""
     user_clothing = load_user_clothing()
     
     if not user_clothing.empty:
-        st.markdown("### 📊 Your Wardrobe Stats")
+        st.markdown("### 📊 Your greendrobe Stats")
         
         # Basic stats
         col1, col2, col3 = st.columns(3)
@@ -2204,7 +2476,7 @@ def show_wardrobe_stats():
         for _, item in recent_items.iterrows():
             st.markdown(f"- {item['name']} ({item['type_of_clothing']})")
     else:
-        st.info("Add some clothes to your wardrobe to see statistics!")
+        st.info("Add some clothes to your greendrobe to see statistics!")
 
 def save_challenges(challenges):
     """Save challenges to JSON file"""
@@ -2325,7 +2597,7 @@ def style_quizzes():
     # Quiz Selection
     quiz_type = st.selectbox(
         "Choose a Quiz Topic",
-        ["Color Analysis", "Face Shape", "Body Type", "Style Personality", "Wardrobe Essentials"]
+        ["Color Analysis", "Face Shape", "Body Type", "Style Personality", "greendrobe Essentials"]
     )
     
     if quiz_type == "Color Analysis":
@@ -2336,7 +2608,7 @@ def style_quizzes():
         body_type_quiz()
     elif quiz_type == "Style Personality":
         style_personality_quiz()
-    elif quiz_type == "Wardrobe Essentials":
+    elif quiz_type == "greendrobe Essentials":
         wardrobe_essentials_quiz()
 
 def color_analysis_quiz():
@@ -2425,12 +2697,12 @@ def show_example_outfits(color_season):
     user_clothing = load_user_clothing()
     
     if not user_clothing.empty:
-        # Use GPT-4 to suggest outfits from user's wardrobe that match their color season
-        prompt = f"""Based on this wardrobe data:
+        # Use GPT-4 to suggest outfits from user's greendrobe that match their color season
+        prompt = f"""Based on this greendrobe data:
         {user_clothing[['name', 'color', 'type_of_clothing']].to_string()}
         
         Suggest 2-3 outfits that would work well for a {color_season} color season.
-        Only include items that actually exist in the wardrobe data.
+        Only include items that actually exist in the greendrobe data.
         Return each outfit as a list of item names, one outfit per line."""
         
         response = client.chat.completions.create(
@@ -2483,7 +2755,7 @@ def show_example_outfits(color_season):
                     if save_outfit(valid_items, outfit_name, f"{color_season} Season"):
                         st.success(f"✨ Outfit saved as '{outfit_name}'!")
     else:
-        st.info("Add some clothes to your wardrobe to see personalized outfit suggestions!")
+        st.info("Add some clothes to your greendrobe to see personalized outfit suggestions!")
 
 def face_shape_quiz():
     """Quiz to determine user's face shape"""
@@ -2728,7 +3000,7 @@ def style_personality_quiz():
             ]
         },
         'color_approach': {
-            'question': "How do you approach color in your wardrobe?",
+            'question': "How do you approach color in your greendrobe?",
             'options': [
                 "Neutral palette with occasional pops of color",
                 "Bold, vibrant colors that make a statement",
@@ -2761,7 +3033,7 @@ def style_personality_quiz():
             'question': "How do you approach outfit planning?",
             'options': [
                 "Carefully coordinated the night before",
-                "Capsule wardrobe with easy mixing",
+                "Capsule greendrobe with easy mixing",
                 "Spontaneous based on mood",
                 "Following specific style rules",
                 "Inspired by current trends"
@@ -2864,7 +3136,7 @@ def show_style_personality_results(personality_analysis):
     with col1:
         st.markdown(f"""
             ### Primary Style: {primary}
-            This is your dominant style preference and should guide most of your wardrobe choices.
+            This is your dominant style preference and should guide most of your greendrobe choices.
         """)
     
     with col2:
@@ -2881,7 +3153,7 @@ def show_style_personality_results(personality_analysis):
     
     recommendations = get_style_recommendations(primary, secondary)
     
-    tabs = st.tabs(["Wardrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
+    tabs = st.tabs(["greendrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
     
     with tabs[0]:
         st.markdown("#### Must-Have Pieces")
@@ -2898,14 +3170,14 @@ def show_style_personality_results(personality_analysis):
             st.markdown(f"- {tip}")
     
     with tabs[3]:
-        st.markdown("#### Shopping Recommendations")
+        st.markdown("#### Shopping Recommendation")
         st.markdown(recommendations['shopping_guide'])
     
     # Action steps
     st.markdown("### Next Steps")
     st.markdown("""
-        1. Review your current wardrobe against these recommendations
-        2. Identify gaps in your wardrobe essentials
+        1. Review your current greendrobe against these recommendations
+        2. Identify gaps in your greendrobe essentials
         3. Plan your next shopping trip based on the guidelines
         4. Experiment with combining your primary and secondary styles
     """)
@@ -2917,7 +3189,7 @@ def get_style_recommendations(primary, secondary):
     Secondary Style: {secondary}
     
     Include:
-    1. List of 10 wardrobe essentials
+    1. List of 10 greendrobe essentials
     2. Ideal color palette description
     3. 5 specific styling tips
     4. Shopping guide with specific store recommendations
@@ -2936,10 +3208,10 @@ def get_style_recommendations(primary, secondary):
 
 def wardrobe_essentials_quiz():
     """Quiz to determine essential pieces for user's lifestyle"""
-    st.markdown("### 👔 Wardrobe Essentials Quiz")
+    st.markdown("### 👔 greendrobe Essentials Quiz")
     st.markdown("""
         Let's identify the key pieces you need based on your lifestyle and preferences.
-        This will help you build a functional and versatile wardrobe.
+        This will help you build a functional and versatile greendrobe.
     """)
     
     questions = {
@@ -2989,33 +3261,33 @@ def wardrobe_essentials_quiz():
         show_wardrobe_essentials_results(essentials)
 
 def analyze_wardrobe_essentials(responses):
-    """Analyze quiz responses to determine wardrobe essentials"""
+    """Analyze quiz responses to determine greendrobe essentials"""
     prompt = f"""Based on these factors:
     Lifestyle: {responses['lifestyle']}
     Climate: {responses['climate']}
     Priorities: {responses['priorities']}
     
-    Create a list of 10 essential wardrobe pieces that would best serve this person.
+    Create a list of 10 essential greendrobe pieces that would best serve this person.
     Return the list with each item on a new line."""
     
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a wardrobe planning expert."},
+            {"role": "system", "content": "You are a greendrobe planning expert."},
             {"role": "user", "content": prompt}
         ]
     )
     return response.choices[0].message.content.strip().split('\n')
 
 def show_wardrobe_essentials_results(essentials):
-    """Display wardrobe essentials results"""
-    st.success("Your Wardrobe Essentials")
+    """Display greendrobe essentials results"""
+    st.success("Your greendrobe Essentials")
     
     st.markdown("### Must-Have Pieces")
     for i, item in enumerate(essentials, 1):
         st.markdown(f"{i}. {item}")
     
-    st.markdown("### Building Your Wardrobe")
+    st.markdown("### Building Your greendrobe")
     st.markdown("""
         Tips for collecting your essentials:
         - Focus on quality over quantity
@@ -3025,13 +3297,13 @@ def show_wardrobe_essentials_results(essentials):
         - Add statement pieces gradually
     """)
     
-    # Check against current wardrobe
+    # Check against current greendrobe
     user_clothing = load_user_clothing()
     if not user_clothing.empty:
-        st.markdown("### Wardrobe Gap Analysis")
+        st.markdown("### greendrobe Gap Analysis")
         missing_items = []
         for essential in essentials:
-            # Check if any similar items exist in wardrobe
+            # Check if any similar items exist in greendrobe
             if not any(essential.lower() in item.lower() for item in user_clothing['name']):
                 missing_items.append(essential)
         
@@ -3378,7 +3650,7 @@ def style_personality_quiz():
             ]
         },
         'color_approach': {
-            'question': "How do you approach color in your wardrobe?",
+            'question': "How do you approach color in your greendrobe?",
             'options': [
                 "Neutral palette with occasional pops of color",
                 "Bold, vibrant colors that make a statement",
@@ -3411,7 +3683,7 @@ def style_personality_quiz():
             'question': "How do you approach outfit planning?",
             'options': [
                 "Carefully coordinated the night before",
-                "Capsule wardrobe with easy mixing",
+                "Capsule greendrobe with easy mixing",
                 "Spontaneous based on mood",
                 "Following specific style rules",
                 "Inspired by current trends"
@@ -3514,7 +3786,7 @@ def show_style_personality_results(personality_analysis):
     with col1:
         st.markdown(f"""
             ### Primary Style: {primary}
-            This is your dominant style preference and should guide most of your wardrobe choices.
+            This is your dominant style preference and should guide most of your greendrobe choices.
         """)
     
     with col2:
@@ -3531,7 +3803,7 @@ def show_style_personality_results(personality_analysis):
     
     recommendations = get_style_recommendations(primary, secondary)
     
-    tabs = st.tabs(["Wardrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
+    tabs = st.tabs(["greendrobe Essentials", "Color Palette", "Styling Tips", "Shopping Guide"])
     
     with tabs[0]:
         st.markdown("#### Must-Have Pieces")
@@ -3554,8 +3826,8 @@ def show_style_personality_results(personality_analysis):
     # Action steps
     st.markdown("### Next Steps")
     st.markdown("""
-        1. Review your current wardrobe against these recommendations
-        2. Identify gaps in your wardrobe essentials
+        1. Review your current greendrobe against these recommendations
+        2. Identify gaps in your greendrobe essentials
         3. Plan your next shopping trip based on the guidelines
         4. Experiment with combining your primary and secondary styles
     """)
@@ -3567,7 +3839,7 @@ def get_style_recommendations(primary, secondary):
     Secondary Style: {secondary}
     
     Include:
-    1. List of 10 wardrobe essentials
+    1. List of 10 greendrobe essentials
     2. Ideal color palette description
     3. 5 specific styling tips
     4. Shopping guide with specific store recommendations
@@ -3586,10 +3858,10 @@ def get_style_recommendations(primary, secondary):
 
 def wardrobe_essentials_quiz():
     """Quiz to determine essential pieces for user's lifestyle"""
-    st.markdown("### 👔 Wardrobe Essentials Quiz")
+    st.markdown("### 👔 greendrobe Essentials Quiz")
     st.markdown("""
         Let's identify the key pieces you need based on your lifestyle and preferences.
-        This will help you build a functional and versatile wardrobe.
+        This will help you build a functional and versatile greendrobe.
     """)
     
     questions = {
@@ -3639,33 +3911,33 @@ def wardrobe_essentials_quiz():
         show_wardrobe_essentials_results(essentials)
 
 def analyze_wardrobe_essentials(responses):
-    """Analyze quiz responses to determine wardrobe essentials"""
+    """Analyze quiz responses to determine greendrobe essentials"""
     prompt = f"""Based on these factors:
     Lifestyle: {responses['lifestyle']}
     Climate: {responses['climate']}
     Priorities: {responses['priorities']}
     
-    Create a list of 10 essential wardrobe pieces that would best serve this person.
+    Create a list of 10 essential greendrobe pieces that would best serve this person.
     Return the list with each item on a new line."""
     
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a wardrobe planning expert."},
+            {"role": "system", "content": "You are a greendrobe planning expert."},
             {"role": "user", "content": prompt}
         ]
     )
     return response.choices[0].message.content.strip().split('\n')
 
 def show_wardrobe_essentials_results(essentials):
-    """Display wardrobe essentials results"""
-    st.success("Your Wardrobe Essentials")
+    """Display greendrobe essentials results"""
+    st.success("Your greendrobe Essentials")
     
     st.markdown("### Must-Have Pieces")
     for i, item in enumerate(essentials, 1):
         st.markdown(f"{i}. {item}")
     
-    st.markdown("### Building Your Wardrobe")
+    st.markdown("### Building Your greendrobe")
     st.markdown("""
         Tips for collecting your essentials:
         - Focus on quality over quantity
@@ -3675,13 +3947,13 @@ def show_wardrobe_essentials_results(essentials):
         - Add statement pieces gradually
     """)
     
-    # Check against current wardrobe
+    # Check against current greendrobe
     user_clothing = load_user_clothing()
     if not user_clothing.empty:
-        st.markdown("### Wardrobe Gap Analysis")
+        st.markdown("### greendrobe Gap Analysis")
         missing_items = []
         for essential in essentials:
-            # Check if any similar items exist in wardrobe
+            # Check if any similar items exist in greendrobe
             if not any(essential.lower() in item.lower() for item in user_clothing['name']):
                 missing_items.append(essential)
         
@@ -3998,528 +4270,1484 @@ def color_picker_tool():
                         percentage = color['percent']
                         show_color_swatch(hex_code, f"{name} ({percentage:.1f}%)")
 
-# Main function
-def main():
-   set_custom_style()
-  
-   if "logged_in" not in st.session_state:
-       st.session_state.logged_in = False
-   if "username" not in st.session_state:
-       st.session_state.username = None
-   if "show_style_quiz" not in st.session_state:
-       st.session_state.show_style_quiz = False
-
-
-   st.markdown("""
-       <h1 style='text-align: center; color: #2c3e50; padding: 2rem 0;'>
-           👔 Your Digital Wardrobe
-       </h1>
-   """, unsafe_allow_html=True)
-
-
-   if st.session_state.logged_in and st.session_state.username:
-       if st.session_state.show_style_quiz:
-           style_quiz()
-       elif st.session_state.get('show_tutorial', False):
-           show_tutorial()
-       else:
-           # Regular app flow
-           migrate_images()
-           
-           # Get page from URL parameters
-           current_page = st.query_params.get('page', 'Home')
-           
-           # Update sidebar to match URL
-           page = st.sidebar.selectbox(
-               "Choose a page",
-               ["Home", "Image Uploader and Display", "Saved Clothes", 
-                "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-                "Shopping Recommendations"],  # Added new page
-               index=["Home", "Image Uploader and Display", "Saved Clothes", 
-                      "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-                      "Saved Outfits", "Outfit Calendar", "Style Quizzes",
-                      "Shopping Recommendations"].index(current_page)
-           )
-           
-           # Show the selected page
-           if page == "Home":
-               homepage()
-           elif page == "Image Uploader and Display":
-               image_uploader_and_display()
-           elif page == "Saved Clothes":
-               display_saved_clothes()
-           elif page == "Clothing Data Insights with GPT-4":
-               clothing_data_insights()
-           elif page == "Weather-Based Outfits":
-               weather_based_outfits()
-           elif page == "Saved Outfits":
-               display_saved_outfits()
-           elif page == "Outfit Calendar":
-               schedule_outfits()
-           elif page == "Style Quizzes":
-               style_quizzes()
-           elif page == "Shopping Recommendations":
-               shopping_recommendations()
-   else:
-       st.markdown("""
-           <div class='welcome-msg'>
-               Welcome to Your Digital Wardrobe!
-               <br>Please login or create an account to get started.
-           </div>
-       """, unsafe_allow_html=True)
-       
-       auth_page = st.sidebar.selectbox("Authentication", ["Login", "Create Account"])
-       if auth_page == "Login":
-           login()
-       elif auth_page == "Create Account":
-           create_account()
-
-# Add these new functions
-def shopping_recommendations():
-    """Generate personalized shopping recommendations"""
-    st.title("🛍️ Personalized Shopping Recommendations")
-    
-    # Create tabs for different recommendation types
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "👕 Similar to My Clothes",
-        "❓ Based on Questions",
-        "👗 Complete an Outfit",
-        "💝 My Wishlist"  # New tab
-    ])
-    
-    with tab1:
-        similar_clothes_recommendations()
-    
-    with tab2:
-        question_based_recommendations()
-    
-    with tab3:
-        complete_outfit_recommendations()
-        
-    with tab4:
-        view_wishlist()
-
-def view_wishlist():
-    """View and manage wishlist items"""
-    st.markdown("### My Wishlist")
-    
-    # Verify user is logged in
-    if "username" not in st.session_state:
-        st.error("Please log in to view your wishlist.")
-        return
-        
-    wishlist_file = f"{st.session_state.username}_wishlist.json"
-    
-    # Check if wishlist file exists
-    if not os.path.exists(wishlist_file):
-        st.info("Your wishlist is empty. Start saving items you like!")
-        return
-        
-    try:
-        # Read wishlist file
-        with open(wishlist_file, 'r') as f:
-            wishlist = json.load(f)
-            
-        if not wishlist:
-            st.info("Your wishlist is empty. Start saving items you like!")
-            return
-            
-        # Add sort options
-        sort_by = st.selectbox(
-            "Sort by:",
-            ["Date Added (Newest)", "Date Added (Oldest)", "Price (Low to High)", "Price (High to Low)"]
-        )
-        
-        # Sort wishlist items
-        try:
-            if sort_by == "Date Added (Newest)":
-                wishlist = sorted(wishlist, key=lambda x: x['date_added'], reverse=True)
-            elif sort_by == "Date Added (Oldest)":
-                wishlist = sorted(wishlist, key=lambda x: x['date_added'])
-            elif sort_by == "Price (Low to High)":
-                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')))
-            elif sort_by == "Price (High to Low)":
-                wishlist = sorted(wishlist, key=lambda x: float(x['item'].get('price', '0').replace('$', '').replace(',', '')), reverse=True)
-        except (KeyError, ValueError) as e:
-            st.warning("Some items may have invalid price data. Sorting might not be accurate.")
-        
-        # Display items in grid
-        for i in range(0, len(wishlist), 3):
-            cols = st.columns(3)
-            for j, col in enumerate(cols):
-                if i + j < len(wishlist):
-                    item_data = wishlist[i + j]
-                    item = item_data['item']
-                    with col:
-                        # Display product image
-                        if 'thumbnail' in item:
-                            st.image(item['thumbnail'], use_column_width=True)
-                        
-                        # Display product details
-                        st.markdown(f"""
-                            **{item.get('title', 'No title')[:50]}...**  
-                            💰 {item.get('price', 'Price not available')}  
-                            {f"⭐ {item.get('rating')} ({item.get('reviews', '0')})" if 'rating' in item else ''}  
-                            📅 Added: {item_data['date_added']}
-                        """)
-                        
-                        # Add link to product
-                        if 'link' in item:
-                            st.markdown(f"[Shop Now]({item['link']})")
-                        
-                        # Remove from wishlist button
-                        if st.button("🗑️ Remove", key=f"remove_{i}_{j}"):
-                            wishlist.pop(i + j)
-                            with open(wishlist_file, 'w') as f:
-                                json.dump(wishlist, f, indent=2)
-                            st.experimental_rerun()
-        
-        # Add export option
-        if st.button("📥 Export Wishlist"):
-            export_wishlist(wishlist)
-            
-    except json.JSONDecodeError:
-        st.error("Error reading wishlist file. The file may be corrupted.")
-    except Exception as e:
-        st.error(f"An error occurred while loading your wishlist: {str(e)}")
-
-def export_wishlist(wishlist):
-    """Export wishlist to CSV"""
-    try:
-        # Create DataFrame from wishlist
-        data = []
-        for item_data in wishlist:
-            item = item_data['item']
-            data.append({
-                'Title': item.get('title', 'No title'),
-                'Price': item.get('price', 'N/A'),
-                'Rating': item.get('rating', 'N/A'),
-                'Reviews': item.get('reviews', 'N/A'),
-                'Link': item.get('link', 'N/A'),
-                'Date Added': item_data['date_added']
-            })
-        
-        df = pd.DataFrame(data)
-        
-        # Convert DataFrame to CSV
-        csv = df.to_csv(index=False)
-        
-        # Create download button
-        st.download_button(
-            label="Download CSV",
-            data=csv,
-            file_name="wishlist.csv",
-            mime="text/csv"
-        )
-    except Exception as e:
-        st.error(f"Error exporting wishlist: {str(e)}")
-
-def save_to_wishlist(item):
-    """Save an item to the user's wishlist"""
-    if 'username' not in st.session_state:
-        st.error("Please log in to save items to your wishlist.")
-        return
-
-    wishlist_file = f"{st.session_state.username}_wishlist.json"
-    wishlist = []
-
-    try:
-        # Load existing wishlist if it exists
-        if os.path.exists(wishlist_file):
-            with open(wishlist_file, 'r') as f:
-                wishlist = json.load(f)
-
-        # Add new item with timestamp
-        wishlist.append({
-            'item': item,
-            'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-
-        # Save updated wishlist
-        with open(wishlist_file, 'w') as f:
-            json.dump(wishlist, f, indent=2)
-            
-        st.success("Item added to wishlist!")
-        
-    except Exception as e:
-        st.error(f"Error saving to wishlist: {str(e)}")
-
-def similar_clothes_recommendations():
-    """Find clothes similar to user's existing wardrobe"""
-    st.markdown("### Find Similar Clothes")
-    
-    # Load user's wardrobe
-    user_clothing = load_user_clothing()
-    if user_clothing.empty:
-        st.info("Add some clothes to your wardrobe first to get recommendations!")
-        return
-    
-    # Let user select which item to find similar clothes for
-    selected_item = st.selectbox(
-        "Select an item from your wardrobe to find similar pieces:",
-        options=user_clothing['name'].tolist()
-    )
-    
-    if selected_item:
-        item_details = user_clothing[user_clothing['name'] == selected_item].iloc[0]
-        
-        # Show selected item details
+def display_profile(username):
+    """Display user profile with avatar"""
+    if 'avatar_svg' in st.session_state and 'profile_preferences' in st.session_state:
         col1, col2 = st.columns([1, 2])
+        
         with col1:
-            if os.path.exists(item_details['image_path']):
-                st.image(item_details['image_path'], caption="Selected Item")
+            st.markdown("### Your Avatar")
+            st.markdown(st.session_state.avatar_svg.decode(), unsafe_allow_html=True)
         
         with col2:
-            st.markdown(f"""
-                **Type:** {item_details['type_of_clothing']}  
-                **Color:** {item_details['color']}  
-                **Season:** {item_details['season']}
-            """)
-        
-        # Get similar items using SERP API
-        search_query = f"{item_details['color']} {item_details['type_of_clothing']} similar to {selected_item}"
-        recommendations = get_shopping_recommendations(search_query, "")
-        
-        if recommendations:
-            st.markdown("### Similar Items You Might Like")
-            display_shopping_recommendations(recommendations, "similar")
-
-def question_based_recommendations():
-    """Get recommendations based on user's answers to questions"""
-    st.markdown("### Find Clothes Based on Your Preferences")
-    
-    # Questions to help narrow down recommendations
-    occasion = st.text_input(
-        "What occasion are you shopping for?",
-        placeholder="e.g., Casual, Work, Special Event, Workout, Vacation"
-    )
-    
-    budget = st.text_input(
-        "What's your budget range?",
-        placeholder="e.g., Budget, Mid-range, High-end, Luxury"
-    )
-    
-    style_preference = st.text_input(
-        "What styles do you prefer?",
-        placeholder="e.g., Classic, Trendy, Bohemian, Minimalist, Streetwear, Elegant"
-    )
-    
-    color_preference = st.color_picker("Choose a color you're looking for:", "#000000")
-    
-    if st.button("Find Recommendations"):
-        if not occasion or not budget or not style_preference:
-            st.warning("Please fill in all fields to get personalized recommendations.")
-            return
+            st.markdown("### Profile Details")
+            prefs = st.session_state.profile_preferences
             
-        # Construct search query based on answers
-        search_query = f"{occasion} {style_preference} clothing {budget}"
-        recommendations = get_shopping_recommendations(search_query, "")
-        
-        if recommendations:
-            st.markdown("### Recommended Items")
-            display_shopping_recommendations(recommendations, "questions")
-
-def complete_outfit_recommendations():
-    """Find items to complete an outfit"""
-    st.markdown("### Complete Your Outfit")
-    
-    # Load user's saved outfits and wardrobe
-    outfits = load_saved_outfits()
-    user_clothing = load_user_clothing()
-    
-    if user_clothing.empty:
-        st.info("Add some clothes to your wardrobe first to get completion recommendations!")
-        return
-    
-    # Option to start from saved outfit or create new
-    start_from = st.radio(
-        "How would you like to start?",
-        ["Start from a saved outfit", "Build a new outfit"]
-    )
-    
-    if start_from == "Start from a saved outfit":
-        if not outfits:
-            st.info("Create some outfits first to use this feature!")
-            return
+            st.markdown(f"**Style Keywords:** {', '.join(prefs['style_keywords'])}")
+            st.markdown(f"**Favorite Colors:** {', '.join(prefs['favorite_colors'])}")
+            st.markdown(f"**Bio:** {prefs['bio']}")
             
-        # Select saved outfit
-        outfit_names = [outfit['name'] for outfit in outfits]
-        selected_outfit = st.selectbox("Select an outfit to complete:", outfit_names)
-        
-        if selected_outfit:
-            outfit = next((o for o in outfits if o['name'] == selected_outfit), None)
-            if outfit:
-                # Display current outfit items
-                st.markdown("### Current Outfit Items")
-                cols = st.columns(len(outfit['items']))
-                for idx, item in enumerate(outfit['items']):
-                    with cols[idx]:
-                        if os.path.exists(item.get('image_path', '')):
-                            st.image(item['image_path'], caption=item.get('name', ''))
-                
-                # Suggest what's missing
-                missing_items = suggest_missing_items(outfit['items'])
-                if missing_items:
-                    st.markdown("### Suggested Items to Complete the Outfit")
-                    for idx, item in enumerate(missing_items):
-                        recommendations = get_shopping_recommendations(item, "")
-                        if recommendations:
-                            st.markdown(f"#### {item}")
-                            display_shopping_recommendations(recommendations, f"complete_{idx}")
-    
-    else:  # Build a new outfit
-        # Let user select base items
-        st.markdown("### Select Base Items for Your Outfit")
-        selected_items = st.multiselect(
-            "Choose items from your wardrobe:",
-            options=user_clothing['name'].tolist()
-        )
-        
-        if selected_items:
-            # Display selected items
-            st.markdown("### Selected Items")
-            cols = st.columns(len(selected_items))
-            items_details = []
-            for idx, item_name in enumerate(selected_items):
-                item = user_clothing[user_clothing['name'] == item_name].iloc[0]
-                items_details.append({
-                    'name': item_name,
-                    'type_of_clothing': item.get('type_of_clothing') or item.get('type') or item.get('category'),
-                    'color': item.get('color', ''),
-                    'image_path': item.get('image_path', '')
-                })
-                with cols[idx]:
-                    if os.path.exists(item.get('image_path', '')):
-                        st.image(item['image_path'], caption=item_name)
+            if prefs['social_media']['instagram'] or prefs['social_media']['pinterest']:
+                st.markdown("#### Social Media")
+                if prefs['social_media']['instagram']:
+                    st.markdown(f"📸 Instagram: {prefs['social_media']['instagram']}")
+                if prefs['social_media']['pinterest']:
+                    st.markdown(f"📌 Pinterest: {prefs['social_media']['pinterest']}")
             
-            # Suggest completing items
-            missing_items = suggest_missing_items(items_details)
-            if missing_items:
-                st.markdown("### Suggested Items to Complete the Outfit")
-                for item in missing_items:
-                    recommendations = get_shopping_recommendations(item, "")
-                    if recommendations:
-                        st.markdown(f"#### {item}")
-                        display_shopping_recommendations(recommendations, f"complete_{idx}")
+            st.markdown("#### Style Goals")
+            for goal in prefs['style_goals']:
+                st.markdown(f"- {goal}")
 
-def suggest_missing_items(outfit_items):
-    """Suggest items that would complete an outfit"""
-    # Extract types of clothing in the outfit, handling different data structures
-    current_types = []
-    for item in outfit_items:
-        # Handle both dictionary and object formats
-        if isinstance(item, dict):
-            item_type = item.get('type_of_clothing') or item.get('type') or item.get('category')
-        else:
-            # If item is an object/row from DataFrame
-            item_type = getattr(item, 'type_of_clothing', None) or getattr(item, 'type', None) or getattr(item, 'category', None)
-        
-        if item_type:
-            current_types.append(item_type.lower())
+# def shopping_recommendations():
+#     """Generate personalized shopping recommendations"""
+#     st.title("🛍️ Shopping Recommendations")
+#     
+#     # Load user's greendrobe
+#     user_clothing = load_user_clothing()
+#     
+#     if user_clothing.empty:
+#         st.warning("Please add some clothes to your greendrobe first to get personalized recommendations!")
+#         st.markdown("[Go to Image Uploader and Display →](Image Uploader and Display)")
+#         return
+#     
+#     # Create tabs for different recommendation types
+#     tab1, tab2, tab3 = st.tabs([
+#         "Based on Your Style",
+#         "Fill greendrobe Gaps",
+#         "Trending Items"
+#     ])
+#     
+#     with tab1:
+#         style_based_recommendations(user_clothing)
+#     
+#     with tab2:
+#         greendrobe_gap_recommendations(user_clothing)
+#     
+#     with tab3:
+#         trending_recommendations()
+
+# def style_based_recommendations(user_clothing):
+#     """Generate recommendations based on user's style"""
+#     st.header("Recommendations Based on Your Style")
+#     
+#     # Analyze user's style preferences
+#     clothing_types = user_clothing['type_of_clothing'].value_counts()
+#     colors = user_clothing['color'].value_counts()
+#     
+#     # Display style analysis
+#     col1, col2 = st.columns(2)
+#     
+#     with col1:
+#         st.subheader("Your Most Common Items")
+#         if not clothing_types.empty:
+#             st.bar_chart(clothing_types)
+#     
+#     with col2:
+#         st.subheader("Your Color Preferences")
+#         if not colors.empty:
+#             st.bar_chart(colors)
+#     
+#     # Generate recommendations
+#     st.subheader("Recommended Items")
+#     
+#     # Example recommendations based on user's preferences
+#     recommendations = [
+#         {
+#             "name": "Classic White T-Shirt",
+#             "type": "T-shirt",
+#             "price": "$25",
+#             "description": "A versatile addition to your greendrobe",
+#             "link": "https://example.com/shirt"
+#         },
+#         {
+#             "name": "Dark Blue Jeans",
+#             "type": "Jeans",
+#             "price": "$60",
+#             "description": "Perfect for casual outfits",
+#             "link": "https://example.com/jeans"
+#         },
+#         # Add more recommendations as needed
+#     ]
+#     
+#     # Display recommendations in a grid
+#     cols = st.columns(3)
+#     for idx, item in enumerate(recommendations):
+#         with cols[idx % 3]:
+#             st.markdown(f"### {item['name']}")
+#             st.markdown(f"**Type:** {item['type']}")
+#             st.markdown(f"**Price:** {item['price']}")
+#             st.markdown(f"**Description:** {item['description']}")
+#             st.markdown(f"[Shop Now]({item['link']})")
+
+def wardrobe_gap_recommendations(user_clothing):
+    """Identify and recommend items to fill greendrobe gaps"""
+    st.header("Fill Your greendrobe Gaps")
     
-    # Basic outfit completion rules
-    outfit_rules = {
-        'tops': ['shirt', 'blouse', 't-shirt', 'sweater', 'top'],
-        'bottoms': ['pants', 'skirt', 'shorts', 'jeans'],
-        'shoes': ['sneakers', 'boots', 'heels', 'sandals'],
-        'accessories': ['necklace', 'earrings', 'bracelet', 'belt'],
-        'outerwear': ['jacket', 'coat', 'cardigan']
+    # Define essential greendrobe items
+    essential_items = {
+        "Tops": ["T-shirt", "Blouse", "Sweater"],
+        "Bottoms": ["Jeans", "Pants", "Skirt"],
+        "Outerwear": ["Jacket", "Coat"],
+        "Dresses": ["Dress"],
+        "Shoes": ["Shoes"]
     }
     
-    # Check what's missing
-    missing_items = []
+    # Check what user has
+    user_items = set(user_clothing['type_of_clothing'].unique())
     
-    # Check for main components
-    if not any(type in current_types for type in outfit_rules['tops']):
-        missing_items.append("Top")
-    if not any(type in current_types for type in outfit_rules['bottoms']):
-        missing_items.append("Bottom")
-    if not any(type in current_types for type in outfit_rules['shoes']):
-        missing_items.append("Shoes")
+    # Find gaps
+    gaps = {}
+    for category, items in essential_items.items():
+        missing_items = [item for item in items if item not in user_items]
+        if missing_items:
+            gaps[category] = missing_items
     
-    # Suggest accessories if none present
-    if not any(type in current_types for type in outfit_rules['accessories']):
-        missing_items.append("Accessories")
-    
-    # Suggest outerwear based on season
-    if not any(type in current_types for type in outfit_rules['outerwear']):
-        missing_items.append("Outerwear")
-    
-    return missing_items
+    # Display gaps and recommendations
+    if gaps:
+        st.markdown("### Missing Essential Items")
+        for category, missing in gaps.items():
+            st.markdown(f"**{category}:** {', '.join(missing)}")
+            
+            # Example recommendations for missing items
+            st.markdown("#### Recommended Items")
+            cols = st.columns(len(missing))
+            for idx, item in enumerate(missing):
+                with cols[idx]:
+                    st.markdown(f"##### {item}")
+                    st.markdown("Price: $XX")
+                    st.markdown("[Shop Now](https://example.com)")
+    else:
+        st.success("Great! Your greendrobe contains all essential items!")
 
-def get_shopping_recommendations(search_query, style_context=""):
-    """Get shopping recommendations using SERP API"""
-    try:
-        # Get API key from Streamlit secrets
-        api_key = st.secrets["SERPAPI_KEY"]
+def trending_recommendations():
+    """Show trending fashion items"""
+    st.header("Trending Fashion Items")
+    
+    # Example trending categories
+    trending_categories = [
+        "Sustainable Fashion",
+        "Vintage Inspired",
+        "Minimalist Basics",
+        "Statement Pieces"
+    ]
+    
+    # Display trending categories
+    selected_category = st.selectbox(
+        "Choose a trending category",
+        trending_categories
+    )
+    
+    # Example trending items
+    trending_items = {
+        "Sustainable Fashion": [
+            {"name": "Organic Cotton Tee", "price": "$30"},
+            {"name": "Recycled Denim Jeans", "price": "$80"},
+            {"name": "Eco-friendly Sneakers", "price": "$70"}
+        ],
+        "Vintage Inspired": [
+            {"name": "Retro Print Dress", "price": "$65"},
+            {"name": "High-Waisted Pants", "price": "$55"},
+            {"name": "Vintage Style Blouse", "price": "$45"}
+        ],
+        "Minimalist Basics": [
+            {"name": "Classic White Shirt", "price": "$40"},
+            {"name": "Black Slim Pants", "price": "$50"},
+            {"name": "Basic Blazer", "price": "$90"}
+        ],
+        "Statement Pieces": [
+            {"name": "Printed Kimono", "price": "$75"},
+            {"name": "Bold Pattern Skirt", "price": "$60"},
+            {"name": "Colorful Jacket", "price": "$85"}
+        ]
+    }
+    
+    # Display trending items for selected category
+    if selected_category in trending_items:
+        cols = st.columns(3)
+        for idx, item in enumerate(trending_items[selected_category]):
+            with cols[idx]:
+                st.markdown(f"### {item['name']}")
+                st.markdown(f"**Price:** {item['price']}")
+                st.markdown("[Shop Now](https://example.com)")
+
+def trading_marketplace():
+    """Marketplace for users to trade or share clothing items"""
+    st.title("👕 Trading Marketplace")
+    
+    # Check if user is logged in
+    if "username" not in st.session_state:
+        st.warning("Please log in to access the Trading Marketplace")
+        return
         
-        # Set up the parameters for the API call
-        params = {
-            "api_key": api_key,
-            "engine": "google_shopping",
-            "q": search_query,
-            "num": 6,
-            "price_low": 0,
-            "price_high": 1000,
-            "gl": "us"
+    # Create tabs for different marketplace functions
+    tab1, tab2, tab3 = st.tabs(["Browse Items", "List Item", "My Listings"])
+    
+    with tab1:
+        st.markdown("### Available Items")
+        # Load all available items from marketplace
+        marketplace_items = load_marketplace_items()
+        
+        if marketplace_items.empty:
+            st.info("No items currently listed in the marketplace")
+        else:
+            # Display items in grid layout
+            items_per_row = 3
+            for i in range(0, len(marketplace_items), items_per_row):
+                cols = st.columns(items_per_row)
+                for j, col in enumerate(cols):
+                    if i + j < len(marketplace_items):
+                        item = marketplace_items.iloc[i + j]
+                        with col:
+                            if os.path.exists(item['image_path']):
+                                st.image(item['image_path'], caption=item['name'])
+                                st.write(f"**{item['name']}**")
+                                st.write(f"Listed by: {item['owner']}")
+                                st.write(f"Status: {item['status']}")
+                                
+                                if item['owner'] != st.session_state.username:
+                                    if st.button("Request Trade", key=f"trade_{item['id']}"):
+                                        initiate_trade_request(item['id'])
+                                        st.success("Trade request sent!")
+    
+    with tab2:
+        st.markdown("### List an Item for Trade")
+        # Load user's clothing items
+        user_clothing = load_user_clothing()
+        
+        if user_clothing.empty:
+            st.info("Add items to your greendrobe first!")
+        else:
+            # Form for listing item
+            with st.form("list_item_form"):
+                selected_item = st.selectbox(
+                    "Select item to list",
+                    user_clothing['name'].tolist()
+                )
+                
+                trade_preferences = st.multiselect(
+                    "What would you like in return?",
+                    ["Shirts", "Pants", "Dresses", "Shoes", "Accessories"],
+                    max_selections=3
+                )
+                
+                description = st.text_area(
+                    "Additional notes",
+                    placeholder="Add any details about condition, size, etc."
+                )
+                
+                if st.form_submit_button("List Item"):
+                    if list_item_for_trade(selected_item, trade_preferences, description):
+                        st.success("Item listed successfully!")
+                        st.rerun()
+    
+    with tab3:
+        st.markdown("### My Listed Items")
+        # Load user's listed items
+        my_listings = load_user_listings()
+        
+        if my_listings.empty:
+            st.info("You haven't listed any items yet")
+        else:
+            for _, item in my_listings.iterrows():
+                with st.expander(item['name']):
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        if os.path.exists(item['image_path']):
+                            st.image(item['image_path'])
+                    with col2:
+                        st.write(f"**Status:** {item['status']}")
+                        st.write(f"**Listed on:** {item['list_date']}")
+                        st.write(f"**Trade preferences:** {', '.join(item['trade_preferences'])}")
+                        
+                        if st.button("Remove Listing", key=f"remove_{item['id']}"):
+                            remove_listing(item['id'])
+                            st.success("Listing removed")
+                            st.rerun()
+
+def load_marketplace_items():
+    """Load all available items in the marketplace"""
+    marketplace_file = "marketplace.csv"
+    if os.path.exists(marketplace_file):
+        return pd.read_csv(marketplace_file)
+    return pd.DataFrame(columns=['id', 'name', 'owner', 'image_path', 'status', 'trade_preferences', 'list_date'])
+
+def list_item_for_trade(item_name, trade_preferences, description):
+    """Add an item to the marketplace"""
+    try:
+        marketplace_items = load_marketplace_items()
+        user_clothing = load_user_clothing()
+        
+        item = user_clothing[user_clothing['name'] == item_name].iloc[0]
+        
+        new_listing = pd.DataFrame([{
+            'id': str(uuid.uuid4()),
+            'name': item_name,
+            'owner': st.session_state.username,
+            'image_path': item['image_path'],
+            'status': 'Available',
+            'trade_preferences': json.dumps(trade_preferences),
+            'description': description,
+            'list_date': datetime.now().strftime("%Y-%m-%d")
+        }])
+        
+        marketplace_items = pd.concat([marketplace_items, new_listing], ignore_index=True)
+        marketplace_items.to_csv("marketplace.csv", index=False)
+        return True
+        
+    except Exception as e:
+        st.error(f"Error listing item: {str(e)}")
+        return False
+
+def load_user_listings():
+    """Load listings for the current user"""
+    marketplace_items = load_marketplace_items()
+    return marketplace_items[marketplace_items['owner'] == st.session_state.username]
+
+def remove_listing(listing_id):
+    """Remove an item from the marketplace"""
+    marketplace_items = load_marketplace_items()
+    marketplace_items = marketplace_items[marketplace_items['id'] != listing_id]
+    marketplace_items.to_csv("marketplace.csv", index=False)
+
+def initiate_trade_request(listing_id):
+    """
+    Initiate a trade request for a marketplace item
+    
+    Args:
+        listing_id (str): ID of the marketplace listing being requested
+    """
+    try:
+        # Load necessary data
+        marketplace_items = load_marketplace_items()
+        user_clothing = load_user_clothing()
+        
+        # Get the listing details
+        listing = marketplace_items[marketplace_items['id'] == listing_id].iloc[0]
+        
+        # Create trade request file path
+        trade_requests_file = "trade_requests.csv"
+        
+        # Load existing trade requests or create new DataFrame
+        if os.path.exists(trade_requests_file):
+            trade_requests = pd.read_csv(trade_requests_file)
+        else:
+            trade_requests = pd.DataFrame(columns=[
+                'request_id', 'listing_id', 'requester', 'owner',
+                'status', 'request_date', 'offered_items', 'notes'
+            ])
+        
+        # Check if user already has a pending request for this item
+        existing_request = trade_requests[
+            (trade_requests['listing_id'] == listing_id) & 
+            (trade_requests['requester'] == st.session_state.username) &
+            (trade_requests['status'] == 'Pending')
+        ]
+        
+        if not existing_request.empty:
+            st.warning("You already have a pending request for this item!")
+            return False
+        
+        # Create form for trade request
+        st.markdown("### Trade Request")
+        with st.form("trade_request_form"):
+            # Let user select items to offer
+            available_items = user_clothing['name'].tolist()
+            offered_items = st.multiselect(
+                "Select items to offer in trade",
+                available_items,
+                max_selections=3
+            )
+            
+            # Add notes for the trade
+            notes = st.text_area(
+                "Add a message to the owner",
+                placeholder="Explain why you're interested in trading, ask questions, etc."
+            )
+            
+            # Submit button
+            submitted = st.form_submit_button("Send Trade Request")
+            
+            if submitted:
+                if not offered_items:
+                    st.error("Please select at least one item to offer!")
+                    return False
+                
+                # Create new trade request
+                new_request = pd.DataFrame([{
+                    'request_id': str(uuid.uuid4()),
+                    'listing_id': listing_id,
+                    'requester': st.session_state.username,
+                    'owner': listing['owner'],
+                    'status': 'Pending',
+                    'request_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'offered_items': json.dumps(offered_items),
+                    'notes': notes
+                }])
+                
+                # Add to trade requests
+                trade_requests = pd.concat([trade_requests, new_request], ignore_index=True)
+                trade_requests.to_csv(trade_requests_file, index=False)
+                
+                # Update listing status
+                marketplace_items.loc[marketplace_items['id'] == listing_id, 'status'] = 'Pending Trade'
+                marketplace_items.to_csv("marketplace.csv", index=False)
+                
+                # Send notification to owner (placeholder for future implementation)
+                notify_owner_of_trade_request(listing['owner'], listing_id)
+                
+                return True
+        
+    except Exception as e:
+        st.error(f"Error initiating trade request: {str(e)}")
+        return False
+
+def notify_owner_of_trade_request(owner_username, listing_id):
+    """
+    Notify the owner of a new trade request (placeholder implementation)
+    
+    Args:
+        owner_username (str): Username of the item owner
+        listing_id (str): ID of the listing
+    """
+    # Create notifications file path
+    notifications_file = f"{owner_username}_notifications.json"
+    
+    try:
+        # Load existing notifications or create new list
+        if os.path.exists(notifications_file):
+            with open(notifications_file, 'r') as f:
+                notifications = json.load(f)
+        else:
+            notifications = []
+        
+        # Add new notification
+        notifications.append({
+            'type': 'trade_request',
+            'listing_id': listing_id,
+            'requester': st.session_state.username,
+            'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'read': False
+        })
+        
+        # Save notifications
+        with open(notifications_file, 'w') as f:
+            json.dump(notifications, f, indent=2)
+            
+    except Exception as e:
+        st.warning(f"Could not send notification: {str(e)}")
+
+def add_social_features():
+    """Add social media features to the sidebar"""
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🌟 Social Features")
+    
+    # Navigation for social features
+    social_option = st.sidebar.selectbox(
+        "Social Navigation",
+        ["Feed", "My Profile", "Find Users", "Saved Posts"],
+        key="social_nav"
+    )
+    
+    # Display the selected social feature
+    if social_option == "Feed":
+        show_social_feed()
+    elif social_option == "My Profile":
+        show_user_profile()
+    elif social_option == "Find Users":
+        find_users()
+    elif social_option == "Saved Posts":
+        show_saved_posts()
+
+def show_social_feed():
+    """Display the social feed with posts from followed users"""
+    st.title("👗 Style Feed")
+    
+    # Create a new post
+    with st.expander("✨ Create New Post"):
+        create_new_post()
+    
+    social_data = load_social_data()
+    posts = social_data.get("posts", [])
+    follows = social_data.get("follows", {}).get(st.session_state.username, [])
+    
+    # Filter posts to show only from followed users and self
+    relevant_posts = [
+        post for post in posts 
+        if post["user_id"] in follows or post["user_id"] == st.session_state.username
+    ]
+    
+    if not relevant_posts:
+        st.info("Follow some users to see their posts here!")
+        return
+    
+    # Display posts
+    for post in relevant_posts:
+        display_post(post)
+
+def show_user_profile():
+    """Display user profile with their posts and stats"""
+    st.title(f"👤 {st.session_state.username}'s Profile")
+    
+    social_data = load_social_data()
+    user_posts = [
+        post for post in social_data.get("posts", [])
+        if post["user_id"] == st.session_state.username
+    ]
+    
+    # Display stats
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Posts", len(user_posts))
+    with col2:
+        followers = len([
+            u for u, f in social_data.get("follows", {}).items()
+            if st.session_state.username in f
+        ])
+        st.metric("Followers", followers)
+    with col3:
+        following = len(
+            social_data.get("follows", {}).get(st.session_state.username, [])
+        )
+        st.metric("Following", following)
+    
+    # Display user's posts
+    st.markdown("### My Posts")
+    for post in user_posts:
+        display_post(post)
+
+def find_users():
+    """Interface for finding and following other users"""
+    st.title("🔍 Find Users")
+    
+    # Load all users
+    df = load_user_db()
+    social_data = load_social_data()
+    following = social_data.get("follows", {}).get(st.session_state.username, [])
+    
+    # Search interface
+    search = st.text_input("Search users...")
+    
+    for _, user in df.iterrows():
+        username = user["username"]
+        if username != st.session_state.username and (
+            not search or search.lower() in username.lower()
+        ):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"👤 {username}")
+            with col2:
+                if username in following:
+                    if st.button("Unfollow", key=f"unfollow_{username}"):
+                        toggle_follow(username)
+                        st.rerun()
+                else:
+                    if st.button("Follow", key=f"follow_{username}"):
+                        toggle_follow(username)
+                        st.rerun()
+
+def show_saved_posts():
+    """Display saved posts"""
+    st.title("📚 Saved Posts")
+    
+    social_data = load_social_data()
+    saved_posts = social_data.get("saved_posts", {}).get(st.session_state.username, [])
+    
+    if not saved_posts:
+        st.info("You haven't saved any posts yet!")
+        return
+    
+    # Display saved posts
+    for post_id in saved_posts:
+        post = next(
+            (p for p in social_data.get("posts", []) if p["id"] == post_id),
+            None
+        )
+        if post:
+            display_post(post)
+
+def create_new_post():
+    """Interface for creating a new post"""
+    with st.form("new_post_form"):
+        content = st.text_area("Share your style thoughts...", max_chars=500)
+        
+        # Option to attach outfit
+        user_outfits = load_user_outfits()
+        outfit_options = ["None"] + [outfit["name"] for outfit in user_outfits]
+        selected_outfit = st.selectbox("Share an outfit", outfit_options)
+        
+        # Upload images
+        uploaded_files = st.file_uploader(
+            "Add photos",
+            accept_multiple_files=True,
+            type=["jpg", "jpeg", "png"]
+        )
+        
+        if st.form_submit_button("Post"):
+            if not content and not uploaded_files and selected_outfit == "None":
+                st.error("Please add some content, photos, or select an outfit to share!")
+                return
+            
+            # Save uploaded images
+            image_paths = []
+            if uploaded_files:
+                for file in uploaded_files:
+                    # Create uploads directory if it doesn't exist
+                    os.makedirs("uploads", exist_ok=True)
+                    
+                    # Generate unique filename
+                    save_path = f"uploads/social_{uuid.uuid4()}_{file.name}"
+                    
+                    # Save the file
+                    with open(save_path, "wb") as f:
+                        f.write(file.getbuffer())
+                    image_paths.append(save_path)
+            
+            # Add outfit images if selected
+            outfit_id = None
+            if selected_outfit != "None":
+                outfit = next((o for o in user_outfits if o["name"] == selected_outfit), None)
+                if outfit:
+                    outfit_id = outfit["id"]
+                    image_paths.extend([item["image_path"] for item in outfit["items"]])
+            
+            # Create post
+            post = create_post(
+                st.session_state.username,
+                content,
+                image_paths,
+                outfit_id
+            )
+            
+            st.success("Post created successfully!")
+            st.rerun()
+
+def load_user_outfits():
+    """Load user's saved outfits"""
+    outfit_file = f"{st.session_state.username}_outfits.json"
+    try:
+        if os.path.exists(outfit_file):
+            with open(outfit_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        st.error(f"Error loading outfits: {str(e)}")
+    return []
+
+def create_post(user_id, content, image_paths, outfit_id=None):
+    """Create a new social post"""
+    social_data = load_social_data()
+    
+    # Initialize posts list if it doesn't exist
+    if "posts" not in social_data:
+        social_data["posts"] = []
+    
+    new_post = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "content": content,
+        "image_paths": image_paths,
+        "likes": 0,
+        "comments": [],
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "outfit_id": outfit_id
+    }
+    
+    # Add post to the beginning of the list
+    social_data["posts"].insert(0, new_post)
+    save_social_data(social_data)
+    return new_post
+
+def load_social_data():
+    """Load social data from JSON file"""
+    social_file = "social_data.json"
+    try:
+        if os.path.exists(social_file):
+            with open(social_file, 'r') as f:
+                return json.load(f)
+        else:
+            # Initialize default structure if file doesn't exist
+            default_data = {
+                "posts": [],
+                "follows": {},
+                "likes": {},
+                "comments": {},
+                "saved_posts": {}
+            }
+            save_social_data(default_data)
+            return default_data
+    except Exception as e:
+        st.error(f"Error loading social data: {str(e)}")
+        return {
+            "posts": [],
+            "follows": {},
+            "likes": {},
+            "comments": {},
+            "saved_posts": {}
         }
 
-        # Make the API request
-        response = requests.get("https://serpapi.com/search", params=params)
-        data = response.json()
-
-        if "shopping_results" in data:
-            results = data["shopping_results"]
-            return results
-        else:
-            st.warning("No shopping results found.")
-            return None
-            
-    except KeyError:
-        st.error("SERP API key not found. Please check your secrets.toml file.")
-        return None
+def save_social_data(data):
+    """Save social data to JSON file"""
+    social_file = "social_data.json"
+    try:
+        # Ensure the data has all required keys
+        required_keys = ["posts", "follows", "likes", "comments", "saved_posts"]
+        for key in required_keys:
+            if key not in data:
+                data[key] = {}
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(social_file) if os.path.dirname(social_file) else '.', exist_ok=True)
+        
+        # Save the data
+        with open(social_file, 'w') as f:
+            json.dump(data, f, indent=2)
     except Exception as e:
-        st.error(f"Error fetching shopping recommendations: {str(e)}")
+        st.error(f"Error saving social data: {str(e)}")
+
+def display_post(post):
+    """Display a single post with interactions"""
+    with st.container():
+        # Post header with user info and timestamp
+        st.markdown(f"""
+            <div style='
+                background-color: white;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 10px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            '>
+                <h4 style='margin: 0;'>👤 {post['user_id']}</h4>
+                <p style='color: #666; font-size: 0.8em; margin: 5px 0;'>
+                    {post['created_at']}
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Post content
+        if post.get('content'):
+            st.markdown(f"<p style='margin: 15px 0;'>{post['content']}</p>", unsafe_allow_html=True)
+        
+        # Display images in a grid
+        if post.get('image_paths'):
+            valid_images = [path for path in post['image_paths'] if os.path.exists(path)]
+            if valid_images:
+                cols = st.columns(min(3, len(valid_images)))
+                for idx, img_path in enumerate(valid_images):
+                    try:
+                        with cols[idx % 3]:
+                            st.image(img_path, use_column_width=True)
+                    except Exception as e:
+                        st.error(f"Error displaying image: {str(e)}")
+        
+        # Interaction buttons
+        col1, col2, col3 = st.columns([1, 1, 4])
+        
+        with col1:
+            # Like button
+            social_data = load_social_data()
+            like_key = f"{st.session_state.username}_{post['id']}"
+            is_liked = like_key in social_data.get("likes", {})
+            like_icon = "❤️" if is_liked else "🤍"
+            
+            if st.button(
+                f"{like_icon} {post.get('likes', 0)}",
+                key=f"like_{post['id']}"
+            ):
+                toggle_like(post['id'])
+                st.rerun()
+        
+        with col2:
+            # Comment button
+            if st.button(
+                "💬 Comment",
+                key=f"comment_{post['id']}"
+            ):
+                st.session_state.commenting_on = post['id']
+        
+        with col3:
+            # Save post button
+            saved_posts = social_data.get("saved_posts", {}).get(st.session_state.username, [])
+            is_saved = post['id'] in saved_posts
+            save_icon = "📑" if is_saved else "🔖"
+            save_text = "Saved" if is_saved else "Save"
+            
+            if st.button(
+                f"{save_icon} {save_text}",
+                key=f"save_{post['id']}"
+            ):
+                toggle_save_post(post['id'])
+                st.rerun()
+        
+        # Comment section
+        if st.session_state.get('commenting_on') == post['id']:
+            with st.form(f"comment_form_{post['id']}"):
+                comment = st.text_input("Add a comment...")
+                if st.form_submit_button("Post Comment"):
+                    if add_comment(post['id'], comment):
+                        st.session_state.commenting_on = None
+                        st.rerun()
+
+        # Display existing comments
+        comments = get_post_comments(post['id'])
+        if comments:
+            with st.expander(f"View {len(comments)} comments"):
+                for comment in comments:
+                    col1, col2 = st.columns([5, 1])
+                    with col1:
+                        st.markdown(f"""
+                            <div style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 5px 0;'>
+                                <strong>{comment['user_id']}</strong>: {comment['content']}
+                                <br><small style='color: #666;'>{comment['created_at']}</small>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col2:
+                        if comment['user_id'] == st.session_state.username:
+                            if st.button("🗑️", key=f"delete_comment_{comment['id']}"):
+                                if delete_comment(post['id'], comment['id']):
+                                    st.rerun()
+
+def toggle_save_post(post_id):
+    """Toggle save/unsave status for a post"""
+    social_data = load_social_data()
+    
+    if "saved_posts" not in social_data:
+        social_data["saved_posts"] = {}
+    
+    if st.session_state.username not in social_data["saved_posts"]:
+        social_data["saved_posts"][st.session_state.username] = []
+    
+    user_saved_posts = social_data["saved_posts"][st.session_state.username]
+    
+    if post_id in user_saved_posts:
+        user_saved_posts.remove(post_id)
+    else:
+        user_saved_posts.append(post_id)
+    
+    save_social_data(social_data)
+
+def toggle_follow(target_user):
+    """Toggle following status for a user"""
+    try:
+        social_data = load_social_data()
+        
+        # Initialize follows dictionary if it doesn't exist
+        if "follows" not in social_data:
+            social_data["follows"] = {}
+        
+        # Initialize current user's following list if it doesn't exist
+        if st.session_state.username not in social_data["follows"]:
+            social_data["follows"][st.session_state.username] = []
+        
+        following = social_data["follows"][st.session_state.username]
+        
+        # Toggle follow status
+        if target_user in following:
+            # Unfollow
+            following.remove(target_user)
+            st.toast(f"Unfollowed {target_user}", icon="👋")
+        else:
+            # Follow
+            following.append(target_user)
+            st.toast(f"Following {target_user}", icon="✨")
+        
+        # Save updated social data
+        save_social_data(social_data)
+        
+        # Update followers count for target user
+        followers = len([
+            u for u, f in social_data["follows"].items()
+            if target_user in f
+        ])
+        
+        # Update following count for current user
+        following_count = len(social_data["follows"][st.session_state.username])
+        
+        return {
+            "success": True,
+            "followers": followers,
+            "following": following_count
+        }
+        
+    except Exception as e:
+        st.error(f"Error toggling follow status: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def toggle_like(post_id):
+    """Toggle like status for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Initialize likes dictionary if it doesn't exist
+        if "likes" not in social_data:
+            social_data["likes"] = {}
+        
+        # Create unique key for this user-post combination
+        like_key = f"{st.session_state.username}_{post_id}"
+        
+        # Find the post and update likes
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Initialize likes count if it doesn't exist
+                if "likes" not in post:
+                    post["likes"] = 0
+                
+                if like_key in social_data["likes"]:
+                    # Unlike
+                    post["likes"] = max(0, post["likes"] - 1)  # Ensure likes don't go below 0
+                    del social_data["likes"][like_key]
+                    st.toast("Post unliked", icon="💔")
+                else:
+                    # Like
+                    post["likes"] += 1
+                    social_data["likes"][like_key] = {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "post_id": post_id,
+                        "user_id": st.session_state.username
+                    }
+                    st.toast("Post liked!", icon="❤️")
+                break
+        
+        # Save updated social data
+        save_social_data(social_data)
+        
+        return {
+            "success": True,
+            "likes": post.get("likes", 0) if "post" in locals() else 0
+        }
+        
+    except Exception as e:
+        st.error(f"Error toggling like status: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def get_post_likes(post_id):
+    """Get the number of likes for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data.get("posts", []):
+            if post["id"] == post_id:
+                return post.get("likes", 0)
+        
+        return 0
+        
+    except Exception as e:
+        st.error(f"Error getting post likes: {str(e)}")
+        return 0
+
+def has_user_liked_post(post_id):
+    """Check if the current user has liked a post"""
+    try:
+        social_data = load_social_data()
+        like_key = f"{st.session_state.username}_{post_id}"
+        return like_key in social_data.get("likes", {})
+        
+    except Exception as e:
+        st.error(f"Error checking like status: {str(e)}")
+        return False
+
+def get_post_comments(post_id):
+    """Get all comments for a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Return comments list, or empty list if no comments
+                return post.get("comments", [])
+        
+        # Return empty list if post not found
+        return []
+        
+    except Exception as e:
+        st.error(f"Error getting comments: {str(e)}")
+        return []
+
+def format_comment_date(timestamp_str):
+    """Format comment timestamp into relative time"""
+    try:
+        comment_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        diff = now - comment_time
+        
+        if diff.days > 7:
+            return comment_time.strftime("%B %d, %Y")
+        elif diff.days > 0:
+            return f"{diff.days}d ago"
+        elif diff.seconds > 3600:
+            return f"{diff.seconds // 3600}h ago"
+        elif diff.seconds > 60:
+            return f"{diff.seconds // 60}m ago"
+        else:
+            return "just now"
+    except Exception:
+        return timestamp_str
+
+def add_comment(post_id, content):
+    """Add a comment to a post"""
+    try:
+        if not content.strip():
+            st.error("Comment cannot be empty")
+            return False
+        
+        social_data = load_social_data()
+        
+        # Create new comment object
+        new_comment = {
+            "id": str(uuid.uuid4()),
+            "user_id": st.session_state.username,
+            "content": content.strip(),
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "likes": 0
+        }
+        
+        # Find the post and add the comment
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Initialize comments list if it doesn't exist
+                if "comments" not in post:
+                    post["comments"] = []
+                
+                # Add the new comment
+                post["comments"].append(new_comment)
+                
+                # Save updated social data
+                save_social_data(social_data)
+                
+                # Show success message
+                st.toast("Comment added successfully!", icon="💬")
+                return True
+        
+        st.error("Post not found")
+        return False
+        
+    except Exception as e:
+        st.error(f"Error adding comment: {str(e)}")
+        return False
+
+def delete_comment(post_id, comment_id):
+    """Delete a comment from a post"""
+    try:
+        social_data = load_social_data()
+        
+        # Find the post
+        for post in social_data["posts"]:
+            if post["id"] == post_id:
+                # Find and remove the comment
+                # Only allow deletion if the user is the comment author
+                post["comments"] = [
+                    c for c in post.get("comments", [])
+                    if c["id"] != comment_id or c["user_id"] != st.session_state.username
+                ]
+                
+                # Save updated social data
+                save_social_data(social_data)
+                
+                # Show success message
+                st.toast("Comment deleted", icon="🗑️")
+                return True
+        
+        st.error("Post not found")
+        return False
+        
+    except Exception as e:
+        st.error(f"Error deleting comment: {str(e)}")
+        return False
+
+def can_delete_comment(comment):
+    """Check if current user can delete a comment"""
+    return comment["user_id"] == st.session_state.username
+
+def create_instagram_style_post(outfit, username):
+    """Create an Instagram-style post layout for an outfit"""
+    try:
+        # Create a styled container for the post
+        st.markdown("""
+            <style>
+            .instagram-post {
+                background: white;
+                border: 1px solid #dbdbdb;
+                border-radius: 3px;
+                margin-bottom: 20px;
+                max-width: 400px;  /* Reduced from 600px */
+                margin: 0 auto;
+            }
+            
+            .post-header {
+                padding: 8px;  /* Reduced from 12px */
+                display: flex;
+                align-items: center;
+                border-bottom: 1px solid #efefef;
+            }
+            
+            .post-header img {
+                border-radius: 50%;
+                margin-right: 8px;  /* Reduced from 10px */
+                width: 24px;  /* Reduced from 32px */
+                height: 24px;  /* Reduced from 32px */
+            }
+            
+            .username {
+                font-weight: 600;
+                color: #262626;
+                text-decoration: none;
+                font-size: 0.9em;  /* Added smaller font size */
+            }
+            
+            .post-content {
+                width: 100%;
+                background: #fafafa;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .outfit-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);  /* Changed to 2 columns */
+                gap: 2px;  /* Reduced from 4px */
+                padding: 2px;  /* Reduced from 4px */
+                background: white;
+            }
+            
+            .outfit-item {
+                aspect-ratio: 1;
+                object-fit: cover;
+                width: 100%;
+                max-width: 150px;  /* Added max-width */
+                height: auto;
+            }
+            
+            .post-actions {
+                padding: 8px;  /* Reduced from 12px */
+                border-top: 1px solid #efefef;
+            }
+            
+            .post-likes {
+                font-weight: 600;
+                margin-bottom: 4px;  /* Reduced from 8px */
+                font-size: 0.9em;
+            }
+            
+            .post-caption {
+                margin-bottom: 4px;  /* Reduced from 8px */
+                font-size: 0.9em;
+            }
+            
+            .post-comments {
+                color: #8e8e8e;
+                font-size: 0.8em;
+            }
+            
+            .post-time {
+                color: #8e8e8e;
+                font-size: 0.7em;
+                text-transform: uppercase;
+            }
+            
+            .action-button {
+                background: none;
+                border: none;
+                padding: 4px;  /* Reduced from 8px */
+                cursor: pointer;
+                color: #262626;
+                font-size: 1em;  /* Reduced from 1.2em */
+            }
+            
+            .post-engagement {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 8px;  /* Reduced from 12px */
+            }
+            
+            .hashtag {
+                color: #00376b;
+                text-decoration: none;
+                font-size: 0.8em;
+            }
+            
+            /* Added responsive design for small screens */
+            @media (max-width: 480px) {
+                .instagram-post {
+                    max-width: 100%;
+                }
+                
+                .outfit-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .outfit-item {
+                    max-width: 120px;
+                }
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Generate random engagement numbers
+        likes = np.random.randint(10, 1000)
+        comments = np.random.randint(1, 50)
+        
+        # Create hashtags (limited to 3 for more compact display)
+        hashtags = [
+            f"#{outfit['occasion'].replace(' ', '')}", 
+            "#OOTD",
+            "#StyleShare"
+        ]
+        
+        # Create the post HTML with smaller header image
+        post_html = f"""
+            <div class="instagram-post">
+                <div class="post-header">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={username}" width="24" height="24"/>
+                    <span class="username">@{username}</span>
+                </div>
+                
+                <div class="post-content">
+                    <div class="outfit-grid">
+        """
+        
+        # Add outfit images to grid (limit to 4 items for more compact display)
+        for item in outfit['items'][:4]:  # Limit to 4 items
+            if os.path.exists(item['image_path']):
+                try:
+                    with Image.open(item['image_path']) as img:
+                        # Resize image before converting to base64
+                        img.thumbnail((150, 150))  # Resize to smaller dimensions
+                        buffered = io.BytesIO()
+                        img.save(buffered, format="JPEG", quality=85)  # Reduced quality for smaller size
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        post_html += f"""
+                            <img class="outfit-item" src="data:image/jpeg;base64,{img_str}" 
+                                 alt="{item['name']}" title="{item['name']}"/>
+                        """
+                except Exception as img_error:
+                    st.warning(f"Could not process image for {item['name']}: {str(img_error)}")
+                    continue
+        
+        # Add post actions and caption (simplified)
+        post_html += f"""
+                </div>
+            </div>
+            <div class="post-actions">
+                <div class="post-engagement">
+                    <div>
+                        <button class="action-button">❤️</button>
+                        <button class="action-button">💬</button>
+                        <button class="action-button">📤</button>
+                    </div>
+                    <button class="action-button">🔖</button>
+                </div>
+                <div class="post-likes">{likes:,} likes</div>
+                <div class="post-caption">
+                    <span class="username">@{username}</span> 
+                    {outfit['name']}<br/>
+                    {' '.join(f'<a class="hashtag" href="#">{tag}</a>' for tag in hashtags)}
+                </div>
+                <div class="post-comments">View all {comments} comments</div>
+                <div class="post-time">{(datetime.now() - timedelta(minutes=np.random.randint(1, 60))).strftime('%B %d').upper()}</div>
+            </div>
+        </div>
+        """
+        
+        return st.markdown(post_html, unsafe_allow_html=True)
+    
+    except Exception as e:
+        st.error(f"Error creating Instagram-style post: {str(e)}")
         return None
 
-def display_shopping_recommendations(recommendations, section_id=""):
-    """Display shopping recommendations in a grid layout"""
-    if not recommendations:
-        return
-
-    # Create rows of 3 items each
-    for i in range(0, len(recommendations), 3):
-        cols = st.columns(3)
-        for j, col in enumerate(cols):
-            if i + j < len(recommendations):
-                item = recommendations[i + j]
-                with col:
-                    # Get the correct product link
-                    product_link = item.get('product_link', '')  # Direct Google Shopping link
+def social_media_features():
+    """Handle social media sharing and integration with Instagram-style posts"""
+    st.title("📱 Social Media Integration")
+    
+    # Create tabs for different social features
+    share_tab, connect_tab = st.tabs(["Share Outfits", "Connect Accounts"])
+    
+    with share_tab:
+        st.markdown("### Share Your Outfits")
+        
+        # Load user's saved outfits
+        outfit_file = f"{st.session_state.username}_outfits.json"
+        if os.path.exists(outfit_file):
+            with open(outfit_file, 'r') as f:
+                saved_outfits = json.load(f)
+            
+            if saved_outfits:
+                # Select outfit to share
+                selected_outfit = st.selectbox(
+                    "Choose an outfit to share",
+                    options=[outfit['name'] for outfit in saved_outfits],
+                    key="share_outfit_select"
+                )
+                
+                # Get selected outfit details
+                outfit = next((o for o in saved_outfits if o['name'] == selected_outfit), None)
+                
+                if outfit:
+                    # Display Instagram-style post
+                    create_instagram_style_post(outfit, st.session_state.username)
                     
-                    # Display product image
-                    if 'thumbnail' in item:
-                        st.image(item['thumbnail'], use_column_width=True)
+                    # Share options
+                    st.markdown("#### Share Options")
+                    share_cols = st.columns(4)
                     
-                    # Display link immediately under the image
-                    if product_link:
-                        st.markdown(f'<a href="{product_link}" target="_blank" style="display: block; text-align: center; margin: 5px 0;">🛍️ Shop Now</a>', unsafe_allow_html=True)
+                    share_text = f"Check out my {outfit['name']} outfit for {outfit['occasion']}! #StyleShare #Fashion"
                     
-                    # Display other product details
-                    title = item.get('title', 'No title')[:50]
-                    price = item.get('price', 'Price not available')
-                    source = item.get('source', '')
+                    with share_cols[0]:
+                        if st.button("📸 Instagram"):
+                            instagram_url = f"https://www.instagram.com/create/story?text={share_text}"
+                            st.markdown(f"[Open Instagram]({instagram_url})")
                     
-                    st.markdown(f"""
-                        **{title}...**  
-                        💰 {price}  
-                        🏪 {source}
-                    """)
+                    with share_cols[1]:
+                        if st.button("🐦 Twitter"):
+                            twitter_url = f"https://twitter.com/intent/tweet?text={share_text}"
+                            st.markdown(f"[Open Twitter]({twitter_url})")
+                    
+                    with share_cols[2]:
+                        if st.button("📌 Pinterest"):
+                            pinterest_url = f"https://pinterest.com/pin/create/button/?description={share_text}"
+                            st.markdown(f"[Open Pinterest]({pinterest_url})")
+                    
+                    with share_cols[3]:
+                        if st.button("📋 Copy Link"):
+                            share_link = f"https://yourapp.com/outfit/{outfit['id']}"
+                            pyperclip.copy(share_link)
+                            st.success("Link copied!")
+            else:
+                st.info("No outfits saved yet! Create some outfits to share.")
+        else:
+            st.info("No outfits saved yet! Create some outfits to share.")
+    
+    with connect_tab:
+        st.markdown("### Connect Your Social Accounts")
+        
+        # Load existing connections
+        profile_file = f"{st.session_state.username}_profile.json"
+        social_connections = {}
+        
+        if os.path.exists(profile_file):
+            with open(profile_file, 'r') as f:
+                profile_data = json.load(f)
+                social_connections = profile_data.get('social_connections', {})
+        
+        # Social media connection form
+        with st.form("social_connect_form"):
+            instagram_handle = st.text_input(
+                "Instagram Handle",
+                value=social_connections.get('instagram', ''),
+                placeholder="@username"
+            )
+            
+            pinterest_username = st.text_input(
+                "Pinterest Username",
+                value=social_connections.get('pinterest', ''),
+                placeholder="username"
+            )
+            
+            twitter_handle = st.text_input(
+                "Twitter Handle",
+                value=social_connections.get('twitter', ''),
+                placeholder="@username"
+            )
+            
+            if st.form_submit_button("Save Connections"):
+                try:
+                    # Update social connections
+                    social_connections = {
+                        'instagram': instagram_handle,
+                        'pinterest': pinterest_username,
+                        'twitter': twitter_handle
+                    }
+                    
+                    # Save to profile
+                    if os.path.exists(profile_file):
+                        with open(profile_file, 'r') as f:
+                            profile_data = json.load(f)
+                    else:
+                        profile_data = {}
+                    
+                    profile_data['social_connections'] = social_connections
+                    
+                    with open(profile_file, 'w') as f:
+                        json.dump(profile_data, f, indent=2)
+                    
+                    st.success("Social connections updated!")
+                except Exception as e:
+                    st.error(f"Error saving social connections: {str(e)}")
 
+# Main function
+def main():
+    """Main function to run the Streamlit app"""
+    # Initialize session state for style quiz if not exists
+    if 'show_style_quiz' not in st.session_state:
+        st.session_state.show_style_quiz = False
+        
+    if 'quiz_completed' not in st.session_state:
+        st.session_state.quiz_completed = False
+    
+    # Initialize session state
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    if "username" not in st.session_state:
+        st.session_state.username = None
 
+    # Sidebar navigation
+    page = st.sidebar.selectbox(
+        "Choose a page",
+        ["Home", "Login/Register", "Image Uploader and Display", "Saved Clothes", 
+         "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
+         "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+         # "Shopping Recommendations", 
+         "Trading Marketplace"]
+    )
+    
+    # Display the selected page
+    if page == "Home":
+        homepage()
+    elif page == "Login/Register":
+        if not st.session_state.logged_in:
+            tab1, tab2 = st.tabs(["Login", "Create Account"])
+            with tab1:
+                login()
+            with tab2:
+                create_account()
+        else:
+            st.title(f"Welcome back, {st.session_state.username}!")
+    elif page == "Image Uploader and Display":
+        image_uploader_and_display()
+    elif page == "Saved Clothes":
+        display_saved_clothes()
+    elif page == "Clothing Data Insights with GPT-4":
+        clothing_data_insights()
+    elif page == "Weather-Based Outfits":
+        weather_based_outfits()
+    elif page == "Saved Outfits":
+        display_saved_outfits()
+    elif page == "Outfit Calendar":
+        schedule_outfits()
+    elif page == "Style Quizzes":
+        style_quizzes()
+    # elif page == "Shopping Recommendations":
+    #     shopping_recommendations()
+    elif page == "Trading Marketplace":
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access the Trading Marketplace.")
+            login()
+        else:
+            trading_marketplace()
 
+    # In your main app flow, after authentication
+    if "logged_in" in st.session_state and st.session_state.logged_in:
+        # Add this line to your existing sidebar content
+        st.sidebar.markdown("---")  # Adds a separator line
+        add_social_features()  # Adds the social features section
 
-
+# At the bottom of your file
 if __name__ == "__main__":
-   main()
+    main()
