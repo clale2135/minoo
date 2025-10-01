@@ -59,24 +59,24 @@ def set_custom_style():
            font-style: normal;
        }
        
-       /* Dark green theme for greendrobe */
+       /* Darker green theme for greendrobe */
        :root {
-           --primary-color: #1B4D3E;      /* Dark Forest Green */
-           --primary-hover: #2D5A4A;      /* Medium Forest Green */
-           --background: #0F2B1F;         /* Very Dark Green */
+           --primary-color: #0D2E1F;      /* Very Dark Forest Green */
+           --primary-hover: #1A3D2A;      /* Dark Forest Green */
+           --background: #05140A;         /* Almost Black Green */
            --text-color: #E8F5E8;         /* Soft White */
-           --border-color: #1B4D3E;       /* Dark Forest Green */
-           --accent-color: #3A6B5A;       /* Medium Green */
-           --secondary-color: #4A7C6A;    /* Light Green */
-           --green-gradient: linear-gradient(135deg, #1B4D3E 0%, #2D5A4A 50%, #3A6B5A 100%);
-           --dark-green-gradient: linear-gradient(135deg, #0F2B1F 0%, #1B4D3E 100%);
+           --border-color: #0D2E1F;       /* Very Dark Forest Green */
+           --accent-color: #1F4A35;       /* Dark Green */
+           --secondary-color: #2D5A4A;    /* Medium Dark Green */
+           --green-gradient: linear-gradient(135deg, #0D2E1F 0%, #1A3D2A 50%, #1F4A35 100%);
+           --dark-green-gradient: linear-gradient(135deg, #05140A 0%, #0D2E1F 100%);
        }
 
        /* Main container styling */
        .stApp {
            background-color: var(--background);
            background-image:
-               linear-gradient(rgba(15, 43, 31, 0.95), rgba(27, 77, 62, 0.95)),
+               linear-gradient(rgba(5, 20, 10, 0.95), rgba(13, 46, 31, 0.95)),
                url('https://subtle-patterns.com/patterns/green-fibers.png');
        }
       
@@ -224,13 +224,13 @@ def set_custom_style():
        /* Dropdown items */
        [data-baseweb="select"] [role="listbox"],
        [data-baseweb="select"] [role="option"] {
-           background-color: #1A2918 !important;
+           background-color: #05140A !important;
            color: white !important;
        }
        
        /* Hover state for dropdown options */
        [data-baseweb="select"] [role="option"]:hover {
-           background-color: #293b22 !important;
+           background-color: #0D2E1F !important;
        }
        
        /* Keep the rest of your existing styles but update colors as needed */
@@ -2302,51 +2302,300 @@ def change_page(page_name: str):
     st.markdown(js, unsafe_allow_html=True)
 
 def homepage():
-    """Display the homepage with outfit challenges and features"""
-    # Replace the title with a styled tagline
-    st.markdown('<div class="app-tagline">Effortless Looks, Every Day.</div>', unsafe_allow_html=True)
+    """Display the homepage with GreenDrobe-inspired design"""
     
-    # User's Style Profile Summary
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        st.markdown(f"""
-            ### 👋 Welcome back, {st.session_state.username}!
-            
-            Your Style: **{get_user_style()}**
-        """)
+    # Apply darker green theme
+    st.markdown("""
+    <style>
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        background-color: #0f2418;
+        color: white;
+    }
+    .stApp {
+        background-color: #0f2418;
+    }
+    .stSidebar {
+        background-color: #0a1a0f;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
-    st.markdown("### 🏆 Outfit Challenges")
+    # Hero Section
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 4rem; padding: 3rem 0;">
+        <h1 style="font-size: 3.5rem; font-weight: 700; color: white; margin-bottom: 1rem; letter-spacing: -0.02em;">
+            Welcome to GreenDrobe
+        </h1>
+        <p style="font-size: 1.5rem; color: #e8f5e8; margin-bottom: 2rem; font-weight: 400;">
+            Effortless Looks, Every Day.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    if st.session_state.get('submitting_challenge', False):
-        if submit_challenge_outfit():
-            return
-    
-    # Weekly Challenge
-    with st.expander("🌟 This Week's Challenge", expanded=True):
-        current_challenge = get_current_challenge()
-        st.markdown(f"""
-            ### {current_challenge['title']}
-            
-            {current_challenge['description']}
-            
-            **Deadline**: {current_challenge['deadline']}
-            **Participants**: {current_challenge['participants']} stylists
-        """)
-        
-        if not check_challenge_participation(st.session_state.username, current_challenge['id']):
-            if st.button("Join Challenge"):
-                join_challenge(st.session_state.username, current_challenge['id'])
-                st.success("You've joined the challenge! Start creating your outfit.")
-        else:
-            st.info("You're participating in this challenge!")
-            if st.button("Submit Outfit"):
-                st.session_state.submitting_challenge = True
-                st.session_state.challenge_id = current_challenge['id']
+    # Sign Up Button
+    if not st.session_state.logged_in:
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("Sign Up Free/Login", type="primary", use_container_width=True):
+                st.session_state.page = "Login/Register"
                 st.rerun()
-
-    # Past Challenges
-    with st.expander("🎨 Past Challenges"):
-        show_past_challenges()
+    
+    # How It Works Section
+    st.markdown("""
+    <div style="margin-top: 4rem;">
+        <h2 style="text-align: center; font-size: 2.5rem; font-weight: 700; color: white; margin-bottom: 3rem;">
+            How It Works
+        </h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Three Cards Layout
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style="
+            background-color: #1a3d2a;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
+            <h3 style="color: white; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">
+                1. Upload Your Clothes
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0;">
+                Snap photos of your wardrobe items and let our AI categorize them automatically.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="
+            background-color: #1a3d2a;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+            <h3 style="color: white; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">
+                2. Let AI Suggest Outfits
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0;">
+                Our AI analyzes your style and creates personalized outfit combinations.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="
+            background-color: #1a3d2a;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">💾</div>
+            <h3 style="color: white; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">
+                3. Save or Share Your Look
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0;">
+                Save your favorite outfits, schedule them for specific days, or share with friends.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Features & Benefits Section
+    st.markdown("""
+    <div style="margin-top: 4rem;">
+        <h2 style="text-align: center; font-size: 2.5rem; font-weight: 700; color: white; margin-bottom: 3rem;">
+            Features & Benefits
+        </h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Features Grid (3x2)
+    # Row 1
+    feat_col1, feat_col2, feat_col3 = st.columns(3)
+    
+    with feat_col1:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🧠</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Smart Outfit Recommendations
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Our AI learns your style preferences and suggests outfits that match your taste.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col2:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🌤️</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Weather-Based Suggestions
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Get outfit ideas that are appropriate for the current weather in your location.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col3:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👔</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Closet Organization
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Categorize and filter your clothes by type, color, season, and occasion.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Row 2
+    feat_col4, feat_col5, feat_col6 = st.columns(3)
+    
+    with feat_col4:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Daily Outfit Planner
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Schedule outfits for specific days and never worry about what to wear.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col5:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Easy-to-Use Interface
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Intuitive design makes managing your wardrobe simple and enjoyable.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col6:
+        st.markdown("""
+        <div style="
+            background-color: #2d5a3d;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+            <h3 style="color: white; font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem;">
+                Outfit Challenges
+            </h3>
+            <p style="color: #e8f5e8; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                Participate in style challenges to discover new ways to wear your clothes.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # User Stats Section (if logged in)
+    if st.session_state.logged_in:
+        st.markdown("""
+        <div style="margin-top: 3rem; text-align: center;">
+            <h3 style="color: white; font-size: 1.8rem; font-weight: 600; margin-bottom: 2rem;">
+                Welcome back, """ + st.session_state.username + """! 👋
+            </h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        user_clothing = load_user_clothing()
+        if not user_clothing.empty:
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                st.metric("👕 Items", len(user_clothing))
+            with col_b:
+                st.metric("🏷️ Types", user_clothing['type_of_clothing'].nunique())
+            with col_c:
+                st.metric("🎨 Colors", user_clothing['color'].nunique())
+        else:
+            st.info("📸 Upload your first item to get started! 🚀")
+    
 
 def get_user_style():
     """Get user's style from their profile"""
@@ -2357,82 +2606,6 @@ def get_user_style():
             return profile_data.get('style_aesthetic', 'Not set')
     return "Not set"
 
-def get_current_challenge():
-    """Get the current weekly challenge"""
-    challenges_file = "outfit_challenges.json"
-    if not os.path.exists(challenges_file):
-        # Create default challenge if none exists
-        default_challenge = {
-            "id": "challenge_001",
-            "title": "Mix & Match Monochrome",
-            "description": "Create a stunning outfit using only black and white pieces. Show us how you can make monochrome exciting!",
-            "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
-            "participants": 0,
-            "status": "active"
-        }
-        save_challenges([default_challenge])
-        return default_challenge
-    
-    with open(challenges_file, 'r') as f:
-        challenges = json.load(f)
-        return next((c for c in challenges if c['status'] == 'active'), challenges[0])
-
-def check_challenge_participation(username, challenge_id):
-    """Check if user is participating in a challenge"""
-    participations_file = "challenge_participations.json"
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-            return any(p['username'] == username and p['challenge_id'] == challenge_id 
-                      for p in participations)
-    return False
-
-def join_challenge(username, challenge_id):
-    """Add user to challenge participants"""
-    participations_file = "challenge_participations.json"
-    participations = []
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-    
-    participations.append({
-        "username": username,
-        "challenge_id": challenge_id,
-        "joined_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "joined"
-    })
-    
-    with open(participations_file, 'w') as f:
-        json.dump(participations, f, indent=2)
-    
-    # Update challenge participants count
-    challenges_file = "outfit_challenges.json"
-    with open(challenges_file, 'r') as f:
-        challenges = json.load(f)
-    
-    for challenge in challenges:
-        if challenge['id'] == challenge_id:
-            challenge['participants'] += 1
-    
-    with open(challenges_file, 'w') as f:
-        json.dump(challenges, f, indent=2)
-
-def show_past_challenges():
-    """Display past challenges and winners"""
-    challenges_file = "outfit_challenges.json"
-    if os.path.exists(challenges_file):
-        with open(challenges_file, 'r') as f:
-            challenges = json.load(f)
-            past_challenges = [c for c in challenges if c['status'] == 'completed']
-            
-            for challenge in past_challenges[:3]:  # Show last 3 challenges
-                st.markdown(f"""
-                    #### {challenge['title']}
-                    *{challenge['description']}*
-                    
-                    Participants: {challenge['participants']}
-                """)
-                st.markdown("---")
 
 def show_wardrobe_stats():
     """Display user's greendrobe statistics"""
@@ -2478,117 +2651,6 @@ def show_wardrobe_stats():
     else:
         st.info("Add some clothes to your greendrobe to see statistics!")
 
-def save_challenges(challenges):
-    """Save challenges to JSON file"""
-    challenges_file = "outfit_challenges.json"
-    with open(challenges_file, 'w') as f:
-        json.dump(challenges, f, indent=2)
-
-def submit_challenge_outfit():
-    """Interface for submitting an outfit for a challenge"""
-    st.markdown("### 🎯 Submit Your Challenge Outfit")
-    
-    # Load saved outfits
-    outfits = load_saved_outfits()
-    if not outfits:
-        st.info("You need to create an outfit first! Go to Saved Outfits to create one.")
-        return False
-    
-    # Outfit selection
-    outfit_names = [outfit['name'] for outfit in outfits]
-    selected_outfit_name = st.selectbox(
-        "Select an outfit to submit",
-        options=outfit_names
-    )
-    
-    selected_outfit = next((outfit for outfit in outfits if outfit['name'] == selected_outfit_name), None)
-    
-    if selected_outfit:
-        # Preview selected outfit
-        st.markdown("#### Preview Your Submission:")
-        cols = st.columns(3)
-        for idx, item in enumerate(selected_outfit['items']):
-            with cols[idx % 3]:
-                if os.path.exists(item['image_path']):
-                    image = Image.open(item['image_path'])
-                    st.image(image, caption=item['name'], use_column_width=True)
-        
-        # Description
-        description = st.text_area(
-            "Tell us about your outfit (optional)",
-            placeholder="Explain how your outfit meets the challenge..."
-        )
-        
-        # Submit button
-        if st.button("Submit Challenge Entry", type="primary"):
-            success = save_challenge_submission(
-                username=st.session_state.username,
-                challenge_id=st.session_state.challenge_id,
-                outfit_id=selected_outfit['id'],
-                description=description
-            )
-            if success:
-                st.success("🎉 Your outfit has been submitted to the challenge!")
-                time.sleep(1)
-                st.session_state.submitting_challenge = False
-                st.rerun()
-            else:
-                st.error("Failed to submit outfit. Please try again.")
-    
-    if st.button("Cancel"):
-        st.session_state.submitting_challenge = False
-        st.rerun()
-    
-    return True
-
-def save_challenge_submission(username, challenge_id, outfit_id, description=""):
-    """Save a challenge submission"""
-    try:
-        submissions_file = "challenge_submissions.json"
-        submissions = []
-        if os.path.exists(submissions_file):
-            with open(submissions_file, 'r') as f:
-                submissions = json.load(f)
-        
-        # Create new submission
-        submission = {
-            "id": str(uuid.uuid4()),
-            "username": username,
-            "challenge_id": challenge_id,
-            "outfit_id": outfit_id,
-            "description": description,
-            "submission_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "votes": 0
-        }
-        
-        submissions.append(submission)
-        
-        # Save submissions
-        with open(submissions_file, 'w') as f:
-            json.dump(submissions, f, indent=2)
-        
-        # Update participation status
-        update_participation_status(username, challenge_id, "submitted")
-        
-        return True
-    except Exception as e:
-        st.error(f"Error saving submission: {str(e)}")
-        return False
-
-def update_participation_status(username, challenge_id, status):
-    """Update the status of a user's challenge participation"""
-    participations_file = "challenge_participations.json"
-    if os.path.exists(participations_file):
-        with open(participations_file, 'r') as f:
-            participations = json.load(f)
-        
-        for participation in participations:
-            if (participation['username'] == username and 
-                participation['challenge_id'] == challenge_id):
-                participation['status'] = status
-        
-        with open(participations_file, 'w') as f:
-            json.dump(participations, f, indent=2)
 
 def style_quizzes():
     """Interactive quizzes for personal style education"""
@@ -5698,14 +5760,20 @@ def main():
         st.session_state.username = None
 
     # Sidebar navigation
-    page = st.sidebar.selectbox(
-        "Choose a page",
-        ["Home", "Login/Register", "Image Uploader and Display", "Saved Clothes", 
-         "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
-         "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
-         # "Shopping Recommendations", 
-         "Trading Marketplace"]
-    )
+    if st.session_state.logged_in:
+        page = st.sidebar.selectbox(
+            "Choose a page",
+            ["Home", "Image Uploader and Display", "Saved Clothes", 
+             "Clothing Data Insights with GPT-4", "Weather-Based Outfits", 
+             "Saved Outfits", "Outfit Calendar", "Style Quizzes", 
+             # "Shopping Recommendations", 
+             "Trading Marketplace"]
+        )
+    else:
+        page = st.sidebar.selectbox(
+            "Choose a page",
+            ["Home", "Login/Register"]
+        )
     
     # Display the selected page
     if page == "Home":
@@ -5720,19 +5788,47 @@ def main():
         else:
             st.title(f"Welcome back, {st.session_state.username}!")
     elif page == "Image Uploader and Display":
-        image_uploader_and_display()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            image_uploader_and_display()
     elif page == "Saved Clothes":
-        display_saved_clothes()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            display_saved_clothes()
     elif page == "Clothing Data Insights with GPT-4":
-        clothing_data_insights()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            clothing_data_insights()
     elif page == "Weather-Based Outfits":
-        weather_based_outfits()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            weather_based_outfits()
     elif page == "Saved Outfits":
-        display_saved_outfits()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            display_saved_outfits()
     elif page == "Outfit Calendar":
-        schedule_outfits()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            schedule_outfits()
     elif page == "Style Quizzes":
-        style_quizzes()
+        if not st.session_state.logged_in:
+            st.warning("Please log in to access this feature.")
+            login()
+        else:
+            style_quizzes()
     # elif page == "Shopping Recommendations":
     #     shopping_recommendations()
     elif page == "Trading Marketplace":
