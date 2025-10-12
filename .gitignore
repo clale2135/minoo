@@ -1,0 +1,52 @@
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Data files (user-specific, shouldn't be in repo)
+app/*_profile.json
+app/*_clothing.csv
+app/*_outfits.json
+app/*_schedule.json
+app/*_wishlist.json
+app/*_following.json
+app/challenge_*.json
+app/follows.json
+app/posts.json
+app/social_data.json
+app/trade_listings.json
+app/marketplace.csv
+app/healthcare.json
+
+# Database
+app/greendrobe.db
+app/*.db
+
+# Uploads directory (user-generated content)
+app/uploads/
+app/temp/
+app/user_data/
+app/users/
+
+# Secrets
+app/client_secrets.json
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build files
+*.egg-info/
+dist/
+build/
+
